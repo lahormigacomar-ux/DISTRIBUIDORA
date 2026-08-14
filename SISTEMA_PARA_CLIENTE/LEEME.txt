@@ -1,0 +1,11 @@
+SISTEMA IDEAS DEL NORTE - PRODUCTOS Y CATÁLOGOS
+
+INSTRUCCIONES PARA EL CLIENTE:
+1. Extrae el contenido de este archivo ZIP en una carpeta.
+2. Abre la carpeta y ejecuta el archivo "INICIAR_SISTEMA.bat" con doble clic.
+3. Se abrirá automáticamente el navegador con el sistema listo para usar.
+
+IMPORTANTE:
+- No borres ninguna de las carpetas internas (backend o frontend).
+- El equipo debe tener Node.js instalado para funcionar.
+- El sistema utiliza internet para conectarse a la base de datos de la nube.

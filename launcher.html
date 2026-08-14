@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciando Sistema - Ideas del Norte</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+        }
+        .logo {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            color: #3b82f6;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        .loader-box {
+            margin: 30px 0;
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.05);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-text {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 400;
+        }
+        .version {
+            position: absolute;
+            bottom: 20px;
+            color: #475569;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">IDEAS DEL NORTE</div>
+        <div class="status-text" id="main-msg">Sincronizando motor interno...</div>
+        
+        <div class="loader-box">
+            <div class="loader"></div>
+        </div>
+        
+        <div class="status-text" id="detail-msg">Conectando con la base de datos...</div>
+    </div>
+    
+    <div class="version">v4.0.0 - Modelo de Motor Integrado 🦾</div>
+
+    <script>
+        // Bucle de comprobación (Polleo)
+        async function checkConnection() {
+            try {
+                // Intentamos conectar con el endpoint de familias como prueba de vida
+                const response = await fetch('http://localhost:5000/api/families');
+                if (response.ok) {
+                    document.getElementById('main-msg').innerText = "Motor Sincronizado";
+                    document.getElementById('detail-msg').innerText = "Entrando al sistema...";
+                    
+                    // Redirección total
+                    setTimeout(() => {
+                        window.location.href = 'http://localhost:5000';
+                    }, 500);
+                }
+            } catch (error) {
+                // Si falla, reintentamos en 1 segundo
+                setTimeout(checkConnection, 1000);
+            }
+        }
+        
+        checkConnection();
+    </script>
+</body>
+</html>

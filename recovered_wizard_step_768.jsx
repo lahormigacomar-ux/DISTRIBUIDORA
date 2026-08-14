@@ -1,0 +1,1 @@
+"const fs = require('fs');\nconst raw = fs.readFileSync('C:\\\\Users\\\\Martin\\\\sistema distribuidora\\\\frontend\\\\src\\\\components\\\\ProductWizard.jsx.bak', 'utf8');\nconst lines = raw.split(/\\r?\\n/);\nfor (let i = 7; i < Math.min(15, lines.length); i++) {\n    console.log(`Line ${i}: [${lines[i]}]`);\n}\n"

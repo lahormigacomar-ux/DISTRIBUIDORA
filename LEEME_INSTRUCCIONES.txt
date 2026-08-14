@@ -1,0 +1,20 @@
+¡Listo! He empaquetado el sistema para que lo puedas usar fácilmente.
+
+### ¿Dónde está el archivo?
+El ejecutable se llama **SISTEMA_IDEAS_DEL_NORTE.exe** y está en la carpeta principal:
+`c:\Users\Martin\sistema distribuidora\SISTEMA_IDEAS_DEL_NORTE.exe`
+
+### Cómo usarlo:
+1. Simplemente hacé doble clic en el archivo **SISTEMA_IDEAS_DEL_NORTE.exe**.
+2. Se abrirá una ventana de comandos negra. No la cierres, es el motor del sistema.
+3. Una vez que diga "Server running on port 5000", abrí tu navegador y entrá a:
+   **http://localhost:5000**
+
+---
+
+### Notas importantes:
+- **Base de Datos**: El sistema sigue conectado a tu base de datos de Supabase. Asegurate de tener internet.
+- **Alternativa**: Si por alguna razón el archivo .exe falla (a veces los antivirus lo bloquean o faltan librerías internas), también te dejé el archivo **INICIAR_SISTEMA.bat**. Hace exactamente lo mismo pero de forma más tradicional y segura.
+- **Acceso Directo**: Podés hacerle clic derecho al .exe o al .bat y elegir "Enviar a Escritorio" para tenerlo siempre a mano.
+
+¡Espero que te sirva mucho! Cualquier cosa me avisás.

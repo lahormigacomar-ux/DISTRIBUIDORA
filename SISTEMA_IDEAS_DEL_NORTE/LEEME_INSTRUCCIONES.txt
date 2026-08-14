@@ -1,0 +1,23 @@
+==========================================================
+       INSTRUCCIONES - SISTEMA IDEAS DEL NORTE
+==========================================================
+
+Este paquete contiene la aplicación completa y lista para usar sin necesidad de instalador.
+
+CÓMO USAR:
+----------
+1. Simplemente haz doble clic en "INICIAR_SISTEMA.bat".
+2. Verás una ventana negra por unos segundos y luego se abrirá tu navegador (Chrome, Edge, etc.) automáticamente con el sistema.
+
+SI NO QUIERES VER LA VENTANA NEGRA:
+----------------------------------
+Puedes usar el archivo "LANZADOR_SILENCIOSO.vbs". Esto abrirá el sistema directamente en el navegador sin mostrar nada más.
+
+NOTAS IMPORTANTES:
+------------------
+- El sistema requiere que tengas instalado Node.js en la computadora.
+- No borres ninguna de las carpetas internas (backend o frontend).
+- Si el sistema no abre, asegúrate de que no haya otra versión del programa abierta.
+
+Soporte: Sistema de Gestión Ideas del Norte v1.1.0
+==========================================================

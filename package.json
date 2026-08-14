@@ -1,0 +1,62 @@
+{
+    "name": "sistema-distribuidora",
+    "version": "4.0.0",
+    "main": "electron-main.js",
+    "private": true,
+    "description": "Sistema de Gestión de Catálogos - Ideas del Norte",
+    "author": "Antigravity",
+    "scripts": {
+        "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+        "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
+        "electron:start": "electron .",
+        "electron:build": "npm run build --prefix frontend && electron-builder"
+    },
+    "build": {
+        "appId": "com.ideasdelnorte.sistema",
+        "productName": "IdeasDelNorte",
+        "directories": {
+            "output": "dist_electron"
+        },
+        "win": {
+            "target": [
+                "nsis",
+                "portable"
+            ],
+            "asarUnpack": [
+                "backend/**/*"
+            ]
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true
+        },
+        "portable": {
+            "artifactName": "${productName}_v${version}_standalone.exe"
+        },
+        "files": [
+            "electron-main.js",
+            "launcher.html",
+            "backend/**/*",
+            "frontend/dist/**/*",
+            ".env"
+        ]
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.99.0",
+        "axios": "^1.13.6",
+        "cors": "^2.8.6",
+        "dotenv": "^17.3.1",
+        "express": "^5.2.1",
+        "iconv-lite": "^0.7.2",
+        "jimp": "^0.22.12",
+        "multer": "^2.1.1",
+        "pdfkit": "^0.17.2"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2",
+        "electron": "^41.0.2",
+        "electron-builder": "^26.8.1",
+        "electron-rebuild": "^3.2.9"
+    }
+}

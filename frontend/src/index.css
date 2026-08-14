@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  table {
+    @apply border-collapse w-full text-[11px];
+  }
+
+  th {
+    @apply py-2 px-3 font-semibold uppercase tracking-tight bg-analyst-50 text-analyst-600 border-b border-analyst-200 sticky top-0 text-left z-10;
+  }
+
+  td {
+    @apply py-2 px-3 border-b border-analyst-100 text-analyst-700 align-middle h-9;
+  }
+
+  input,
+  select {
+    @apply py-1 px-2 text-[11px] border-analyst-300 focus:ring-1 focus:ring-primary focus:border-primary rounded bg-white text-analyst-900 h-8 w-full transition-all outline-none;
+  }
+
+  body {
+    @apply bg-analyst-100 font-display text-analyst-800 antialiased overflow-hidden h-screen;
+  }
+}
+
+.spreadsheet-row {
+  @apply transition-colors h-9;
+}
+
+.spreadsheet-row:nth-child(even) {
+  @apply bg-analyst-50/50;
+}
+
+.spreadsheet-row:hover {
+  @apply bg-blue-50/50;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  @apply inline-block align-middle leading-none;
+}

@@ -1317,7 +1317,7 @@ app.post('/api/orders', async (req, res) => {
         const { data: oData, error: oError } = await supabase.from('orders').insert([{
             seller_id: seller_id || null,
             shop_id,
-            status: status || 'pending_preparation',
+            status: status || 'pendiente',
             total,
             company_id: companyId
         }]).select();

@@ -17,16 +17,16 @@ class MyApp extends StatelessWidget {
       title: 'Distribuidora Movil',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         primarySwatch: Colors.cyan,
-        scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
-        cardColor: const Color(0xFF1E293B), // Slate 800
+        scaffoldBackgroundColor: const Color(0xFFF1F5F9), // Slate 100
+        cardColor: Colors.white,
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF334155), // Slate 700
+          fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           hintStyle: const TextStyle(color: AppColors.slate),
         ),
@@ -163,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2,
-                    color: Colors.white,
+                    color: Colors.blueGrey,
                   ),
                 ),
                 const Text(

@@ -845,14 +845,15 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
         Color statusColor = AppColors.orange;
         if (status == 'ENTREGADO') statusColor = AppColors.green;
-        if (status == 'CANCELADO' || status == 'FALLIDO') statusColor = AppColors.red;
-        if (status == 'REPARTO') statusColor = AppColors.blue;
+        if (status == 'NO ENTREGADO') statusColor = AppColors.red;
+        if (status == 'EN TRANSPORTE') statusColor = AppColors.blue;
+        if (status == 'PENDIENTE') statusColor = AppColors.orange;
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: ExpansionTile(
             title: Text(
-              order['negocios']?['name']?.toString().toUpperCase() ?? 'Negocio Desconocido',
+              '${order['negocios']?['name']?.toString().toUpperCase() ?? 'Negocio Desconocido'} (#${order['id'].toString().substring(0, 8).toUpperCase()})',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             subtitle: Text('$formattedDate - \$${total.toStringAsFixed(2)}'),

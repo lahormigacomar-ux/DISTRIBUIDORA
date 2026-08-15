@@ -41,7 +41,7 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
   }
 
   Future<void> _updateStatus(String orderId, String status) async {
-    if (status == 'fallido') {
+    if (status == 'no entregado') {
       _showFailureReasonDialog(orderId);
       return;
     }
@@ -107,10 +107,10 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
                     Navigator.of(context).pop();
                     setState(() => _isLoading = true);
                     try {
-                      await ApiService.updateOrderStatus(orderId, 'fallido', failureReason: selectedReason);
+                      await ApiService.updateOrderStatus(orderId, 'no entregado', failureReason: selectedReason);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Estado actualizado a fallido.')),
+                          const SnackBar(content: Text('Estado actualizado a no entregado.')),
                         );
                       }
                       _loadOrders();
@@ -140,8 +140,8 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
   Widget build(BuildContext context) {
     final themeColor = Colors.orange.shade800;
 
-    final activeOrders = _orders.where((o) => o['status'] == 'reparto').toList();
-    final completedOrders = _orders.where((o) => o['status'] == 'entregado' || o['status'] == 'fallido').toList();
+    final activeOrders = _orders.where((o) => o['status'] == 'en transporte').toList();
+    final completedOrders = _orders.where((o) => o['status'] == 'entregado' || o['status'] == 'no entregado').toList();
 
     return DefaultTabController(
       length: 2,
@@ -204,7 +204,7 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: ExpansionTile(
             title: Text(
-              shop['name']?.toString().toUpperCase() ?? 'Negocio Desconocido',
+              '${shop['name']?.toString().toUpperCase() ?? 'Negocio Desconocido'} (#${order['id'].toString().substring(0, 8).toUpperCase()})',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             subtitle: Text('$address\nFecha: $formattedDate - \$${total.toStringAsFixed(2)}'),
@@ -261,7 +261,7 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                               ),
-                              onPressed: () => _updateStatus(order['id'], 'fallido'),
+                              onPressed: () => _updateStatus(order['id'], 'no entregado'),
                               child: const Text('Fallo de Entrega'),
                             ),
                           ),

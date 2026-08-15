@@ -129,7 +129,7 @@ const OrderManager = () => {
         pathsGroup.clearLayers();
 
         // 1. Collect Geolocation Points
-        const activeOrders = orders.filter(o => ['pending_preparation', 'prepared', 'in_delivery'].includes(o.status));
+        const activeOrders = orders.filter(o => ['pendiente', 'en preparacion', 'preparado', 'en transporte'].includes(o.status));
         const geolocatedPoints = [];
         const routeCoordinatesByDriver = {}; // { driverId: [LatLng] }
 
@@ -141,7 +141,7 @@ const OrderManager = () => {
                 geolocatedPoints.push({ lat, lng, order });
 
                 // Group active shipping coordinates by driver
-                if (order.status === 'in_delivery' && order.deliverer_id) {
+                if (order.status === 'en transporte' && order.deliverer_id) {
                     if (!routeCoordinatesByDriver[order.deliverer_id]) {
                         routeCoordinatesByDriver[order.deliverer_id] = [];
                     }
@@ -153,14 +153,17 @@ const OrderManager = () => {
         // 2. Draw Custom Pin Markers
         geolocatedPoints.forEach(({ lat, lng, order }) => {
             let markerColor = '#f59e0b'; // pending -> amber
-            let statusText = 'Pendiente Preparación';
+            let statusText = 'Pendiente';
 
-            if (order.status === 'prepared') {
+            if (order.status === 'en preparacion') {
+                markerColor = '#f97316'; // orange
+                statusText = 'En Preparación';
+            } else if (order.status === 'preparado') {
                 markerColor = '#3b82f6'; // prepared -> blue
-                statusText = 'Listo para Despacho';
-            } else if (order.status === 'in_delivery') {
+                statusText = 'Preparado';
+            } else if (order.status === 'en transporte') {
                 markerColor = '#8b5cf6'; // in_delivery -> purple
-                statusText = 'En Reparto';
+                statusText = 'En Transporte';
             }
 
             // Create a custom SVG marker
@@ -173,7 +176,7 @@ const OrderManager = () => {
 
             const popupContent = `
                 <div style="font-family: inherit; font-size: 10px; padding: 2px;">
-                    <strong style="text-transform: uppercase;">Pedido #${order.number || order.id.slice(0, 4)}</strong>
+                    <strong style="text-transform: uppercase;">Pedido #${order.id.substring(0, 8).toUpperCase()}</strong>
                     <p style="margin: 4px 0 2px 0; font-weight: bold; color:#1e293b;">${order.negocios?.name.toUpperCase()}</p>
                     <p style="margin: 0; color: #64748b;">${order.negocios?.address.toUpperCase()}</p>
                     <div style="margin-top: 6px; padding: 2px 6px; font-weight: 900; font-size: 8px; border-radius: 999px; text-align: center; text-transform: uppercase; background-color: ${markerColor}15; color: ${markerColor}; border: 1px solid ${markerColor}30;">
@@ -219,7 +222,12 @@ const OrderManager = () => {
     }, [orders, leafletLoaded, loading, activeSubTab]);
 
     // --- PACKING CHECKLIST HANDLERS ---
-    const startPreparation = (order) => {
+    const startPreparation = async (order) => {
+        try {
+            await updateOrderStatus(order.id, 'en preparacion');
+        } catch (e) {
+            console.error('Error starting preparation:', e);
+        }
         // Deep copy order to allow editing items quantities during preparation
         const clonedOrder = JSON.parse(JSON.stringify(order));
         clonedOrder.order_items = (clonedOrder.order_items || []).map(item => ({
@@ -277,7 +285,7 @@ const OrderManager = () => {
     const finishPreparation = async () => {
         if (!isPackingComplete()) return;
         try {
-            await updateOrderStatus(packingOrder.id, 'prepared', null, packingOrder.order_items);
+            await updateOrderStatus(packingOrder.id, 'preparado', null, packingOrder.order_items);
             setPackingOrder(null);
         } catch (e) {
             console.error(e);
@@ -363,22 +371,24 @@ const OrderManager = () => {
 
     const getStatusLabel = (status) => {
         const labels = {
-            'pending_preparation': 'Empaque Pendiente',
-            'prepared': 'Preparado / Listo',
-            'in_delivery': 'En Reparto',
-            'delivered': 'Entregado',
-            'cancelled': 'Cancelado'
+            'pendiente': 'Pendiente',
+            'en preparacion': 'En Preparación',
+            'preparado': 'Preparado',
+            'en transporte': 'En Transporte',
+            'entregado': 'Entregado',
+            'no entregado': 'No Entregado'
         };
         return labels[status] || status;
     };
 
     const getStatusClass = (status) => {
         const classes = {
-            'pending_preparation': 'bg-amber-50 text-amber-600 border-amber-250',
-            'prepared': 'bg-blue-50 text-blue-600 border-blue-250',
-            'in_delivery': 'bg-indigo-50 text-indigo-600 border-indigo-250',
-            'delivered': 'bg-green-50 text-green-600 border-green-250',
-            'cancelled': 'bg-red-50 text-red-400 border-red-250'
+            'pendiente': 'bg-amber-50 text-amber-600 border-amber-250',
+            'en preparacion': 'bg-orange-50 text-orange-600 border-orange-250',
+            'preparado': 'bg-blue-50 text-blue-600 border-blue-250',
+            'en transporte': 'bg-indigo-50 text-indigo-600 border-indigo-250',
+            'entregado': 'bg-green-50 text-green-600 border-green-250',
+            'no entregado': 'bg-red-50 text-red-600 border-red-250'
         };
         return classes[status] || 'bg-slate-50 text-slate-500 border-slate-200';
     };
@@ -395,10 +405,10 @@ const OrderManager = () => {
     );
 
     // Grouping orders by column status
-    const pendingOrders = orders.filter(o => o.status === 'pending_preparation');
-    const preparedOrders = orders.filter(o => o.status === 'prepared');
-    const inDeliveryOrders = orders.filter(o => o.status === 'in_delivery');
-    const historyOrders = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
+    const pendingOrders = orders.filter(o => o.status === 'pendiente' || o.status === 'en preparacion');
+    const preparedOrders = orders.filter(o => o.status === 'preparado');
+    const inDeliveryOrders = orders.filter(o => o.status === 'en transporte');
+    const historyOrders = orders.filter(o => ['entregado', 'no entregado'].includes(o.status));
 
     return (
         <div className="flex-1 bg-white border border-analyst-200 shadow-sm rounded-xl flex flex-col min-h-0 overflow-hidden">
@@ -459,7 +469,7 @@ const OrderManager = () => {
                                                     <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] font-black text-slate-800">#{String(order.number || order.id.slice(0, 4)).toUpperCase()}</span>
+                                                            <span className="text-[10px] font-black text-slate-800">#{order.id.substring(0, 8).toUpperCase()}</span>
                                                             <button
                                                                 onClick={() => setViewingOrder(order)}
                                                                 className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors flex items-center"
@@ -478,10 +488,10 @@ const OrderManager = () => {
                                                     </p>
                                                     <div className="pt-2 border-t border-slate-100 flex justify-between gap-2">
                                                         <button
-                                                            onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                                                            onClick={() => updateOrderStatus(order.id, 'no entregado')}
                                                             className="flex-1 py-1 text-center border border-red-100 text-red-500 rounded-lg text-[8px] font-black uppercase hover:bg-red-50"
                                                         >
-                                                            Cancelar
+                                                            No Entregado
                                                         </button>
                                                         <button
                                                             onClick={() => startPreparation(order)}
@@ -515,7 +525,7 @@ const OrderManager = () => {
                                                     <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] font-black text-slate-800">#{String(order.number || order.id.slice(0, 4)).toUpperCase()}</span>
+                                                            <span className="text-[10px] font-black text-slate-800">#{order.id.substring(0, 8).toUpperCase()}</span>
                                                             <button
                                                                 onClick={() => setViewingOrder(order)}
                                                                 className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors flex items-center"
@@ -570,7 +580,7 @@ const OrderManager = () => {
                                                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="text-[10px] font-black text-slate-800">#{String(order.number || order.id.slice(0, 4)).toUpperCase()}</span>
+                                                            <span className="text-[10px] font-black text-slate-800">#{order.id.substring(0, 8).toUpperCase()}</span>
                                                             <button
                                                                 onClick={() => setViewingOrder(order)}
                                                                 className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors flex items-center"
@@ -598,7 +608,7 @@ const OrderManager = () => {
                                                             Falla
                                                         </button>
                                                         <button
-                                                            onClick={() => updateOrderStatus(order.id, 'delivered')}
+                                                            onClick={() => updateOrderStatus(order.id, 'entregado')}
                                                             className="flex-1 py-1 text-center bg-green-600 hover:bg-green-700 text-white rounded-lg text-[8px] font-black uppercase shadow shadow-green-500/10 flex items-center justify-center gap-0.5"
                                                         >
                                                             <span className="material-symbols-outlined text-[10px]">check_circle</span>
@@ -831,7 +841,7 @@ const OrderManager = () => {
                                 <span className="material-symbols-outlined text-sm text-primary">inventory_2</span>
                                 Control de Preparación (Packing Slip)
                             </h4>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">PEDIDO #{String(packingOrder.number || packingOrder.id.slice(0, 4)).toUpperCase()}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">PEDIDO #{packingOrder.id.substring(0, 8).toUpperCase()}</p>
                             <p className="text-[8.5px] font-medium text-slate-500 uppercase mt-0.5">Cliente: {packingOrder.negocios?.name} ({packingOrder.negocios?.address})</p>
                         </div>
 
@@ -931,7 +941,7 @@ const OrderManager = () => {
                                 Cancelar
                             </button>
                             <button
-                                onClick={() => updateOrderStatus(assigningOrder.id, 'in_delivery', selectedDelivererId)}
+                                onClick={() => updateOrderStatus(assigningOrder.id, 'en transporte', selectedDelivererId)}
                                 disabled={!selectedDelivererId}
                                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[9px] font-black uppercase transition-colors disabled:opacity-40"
                             >
@@ -951,7 +961,7 @@ const OrderManager = () => {
                                     <span className="material-symbols-outlined text-sm text-primary">receipt_long</span>
                                     Detalle Completo del Pedido
                                 </h4>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">PEDIDO #{String(viewingOrder.number || viewingOrder.id.slice(0, 4)).toUpperCase()}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">PEDIDO #{viewingOrder.id.substring(0, 8).toUpperCase()}</p>
                             </div>
                             <button
                                 onClick={() => setViewingOrder(null)}
@@ -978,7 +988,7 @@ const OrderManager = () => {
                                 </p>
                                 <p className="text-slate-500">Preventista: {viewingOrder.preventistas?.name || 'S/D'}</p>
                                 <p className="text-slate-500">Chofer: {viewingOrder.entregadores?.name || 'No asignado'}</p>
-                                {viewingOrder.status === 'cancelled' && (
+                                {viewingOrder.status === 'no entregado' && (
                                     <p className="text-red-500 font-black mt-1 text-[8.5px] border-t border-red-100 pt-1">
                                         Falla: {viewingOrder.failure_reason || 'Sin especificar'}
                                     </p>
@@ -1039,7 +1049,7 @@ const OrderManager = () => {
                                 <span className="material-symbols-outlined text-sm font-black">report</span>
                                 Registrar Falla de Entrega
                             </h4>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">PEDIDO #{String(failingOrder.number || failingOrder.id.slice(0, 4)).toUpperCase()}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">PEDIDO #{failingOrder.id.substring(0, 8).toUpperCase()}</p>
                             <p className="text-[8.5px] font-medium text-slate-500 uppercase mt-0.5">Cliente: {failingOrder.negocios?.name}</p>
                         </div>
 
@@ -1086,7 +1096,7 @@ const OrderManager = () => {
                                     const finalReason = failureReasonForm.reason === 'Otro (Especificar)' 
                                         ? failureReasonForm.otherText 
                                         : failureReasonForm.reason;
-                                    updateOrderStatus(failingOrder.id, 'cancelled', null, null, finalReason || 'Otro motivo');
+                                    updateOrderStatus(failingOrder.id, 'no entregado', null, null, finalReason || 'Otro motivo');
                                 }}
                                 disabled={failureReasonForm.reason === 'Otro (Especificar)' && !failureReasonForm.otherText}
                                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[9px] font-black uppercase transition-colors disabled:opacity-40"

@@ -14,6 +14,31 @@ class EntregadorScreen extends StatefulWidget {
 class _EntregadorScreenState extends State<EntregadorScreen> {
   bool _isLoading = false;
   List<dynamic> _orders = [];
+  List<dynamic> _shops = [];
+  bool _onlyTodayRoute = true;
+
+  Future<void> _callShop(String? phone) async {
+    if (phone == null || phone.trim().isEmpty) return;
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    final uri = Uri.parse('tel:$cleanPhone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  String _getTodayWeekdaySpanish() {
+    final day = DateTime.now().weekday;
+    switch (day) {
+      case 1: return 'Lunes';
+      case 2: return 'Martes';
+      case 3: return 'Miércoles';
+      case 4: return 'Jueves';
+      case 5: return 'Viernes';
+      case 6: return 'Sábado';
+      case 7: return 'Domingo';
+      default: return 'Lunes';
+    }
+  }
 
   Future<void> _openMap(dynamic latitude, dynamic longitude, String? address) async {
     final lat = double.tryParse(latitude?.toString() ?? '');
@@ -41,8 +66,10 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
     setState(() => _isLoading = true);
     try {
       final ordersData = await ApiService.getMobileOrders();
+      final shopsData = await ApiService.getShops();
       setState(() {
         _orders = ordersData;
+        _shops = shopsData;
       });
     } catch (e) {
       if (mounted) {
@@ -176,7 +203,7 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
     final completedOrders = _orders.where((o) => o['status'] == 'entregado' || o['status'] == 'no entregado').toList();
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text('Chofer: ${widget.userInfo['name']}'),
@@ -203,6 +230,7 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
             indicatorSize: TabBarIndicatorSize.tab,
             tabs: [
               Tab(icon: Icon(Icons.local_shipping), text: 'Hoja de Ruta'),
+              Tab(icon: Icon(Icons.store), text: 'Comercios'),
               Tab(icon: Icon(Icons.check_circle), text: 'Completados'),
             ],
           ),
@@ -212,6 +240,7 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
             : TabBarView(
                 children: [
                   _buildOrdersList(activeOrders, themeColor, isActive: true),
+                  _buildShopsTab(themeColor),
                   _buildOrdersList(completedOrders, themeColor, isActive: false),
                 ],
               ),
@@ -365,4 +394,189 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
       },
     );
   }
+
+  Widget _buildShopsTab(Color themeColor) {
+    final todaySpanish = _getTodayWeekdaySpanish();
+    final displayedShops = _onlyTodayRoute
+        ? _shops.where((s) {
+            final days = s['visiting_days'];
+            if (days is List) {
+              return days.contains(todaySpanish);
+            }
+            return false;
+          }).toList()
+        : _shops;
+
+    return Column(
+      children: [
+        // Tab Header with Segmented Toggle
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _onlyTodayRoute ? const Color(0xFF4F46E5) : const Color(0xFFF1F5F9),
+                        foregroundColor: _onlyTodayRoute ? Colors.white : const Color(0xFF475569),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => setState(() => _onlyTodayRoute = true),
+                      child: Text('HOY: ${todaySpanish.toUpperCase()}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: !_onlyTodayRoute ? const Color(0xFF4F46E5) : const Color(0xFFF1F5F9),
+                        foregroundColor: !_onlyTodayRoute ? Colors.white : const Color(0xFF475569),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => setState(() => _onlyTodayRoute = false),
+                      child: const Text('TODOS LOS CLIENTES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Shops List
+        Expanded(
+          child: displayedShops.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.storefront, size: 64, color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          _onlyTodayRoute ? 'No tienes visitas programadas para hoy.' : 'No hay comercios registrados.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: displayedShops.length,
+                  itemBuilder: (context, index) {
+                    final s = displayedShops[index];
+
+                    return Card(
+                      elevation: 4,
+                      shadowColor: Colors.black.withOpacity(0.04),
+                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s['name'].toString().toUpperCase(),
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text('Dirección: ${s['address']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            if (s['owner'] != null && s['owner'].toString().trim().isNotEmpty)
+                              Text('Titular: ${s['owner']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            if (s['phone'] != null && s['phone'].toString().trim().isNotEmpty)
+                              Text('Teléfono: ${s['phone']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+
+                            // Scheduled Days Badges
+                            if (s['visiting_days'] != null && (s['visiting_days'] as List).isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: (s['visiting_days'] as List).map<Widget>((day) {
+                                  final isToday = day == todaySpanish;
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isToday ? const Color(0xFF10B981).withOpacity(0.12) : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: isToday ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Text(
+                                      day.toString().substring(0, 3).toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: isToday ? const Color(0xFF059669) : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+
+                            const Divider(height: 24, color: Color(0xFFF1F5F9)),
+
+                            // Quick Action Buttons
+                            Row(
+                              children: [
+                                if (s['phone'] != null && s['phone'].toString().trim().isNotEmpty) ...[
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      onPressed: () => _callShop(s['phone']),
+                                      icon: const Icon(Icons.phone, size: 14, color: Color(0xFF64748B)),
+                                      label: const Text('LLAMAR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      gradient: const LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF3B82F6)]),
+                                    ),
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      onPressed: () => _openMap(s['latitude'], s['longitude'], s['address']),
+                                      icon: const Icon(Icons.map, size: 14),
+                                      label: const Text('VER EN MAPA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
 }
+

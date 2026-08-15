@@ -1206,7 +1206,7 @@ app.get('/api/negocios', async (req, res) => {
 });
 
 app.post('/api/negocios', async (req, res) => {
-    const { name, owner, address, phone, cuit, is_active, latitude, longitude, price_list } = req.body;
+    const { name, owner, address, phone, cuit, is_active, latitude, longitude, price_list, visiting_days } = req.body;
     const companyId = req.headers['x-company-id'];
     const { data, error } = await supabase.from('negocios').insert([{
         name, owner, address, phone, cuit, 
@@ -1214,7 +1214,8 @@ app.post('/api/negocios', async (req, res) => {
         company_id: companyId,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        price_list: price_list || 'price_unit'
+        price_list: price_list || 'price_unit',
+        visiting_days: visiting_days || []
     }]).select();
     if (error) return res.status(500).json(error);
     res.json(data[0]);

@@ -57,6 +57,7 @@ const Configuration = () => {
     const [activeEntityTab, setActiveEntityTab] = useState('sellers'); // 'sellers', 'shops', 'deliverers'
     const [entityForm, setEntityForm] = useState({});
     const [editingEntityId, setEditingEntityId] = useState(null);
+    const [selectedRouteDay, setSelectedRouteDay] = useState('Lunes');
 
     // Active Company Profile States
     const [companyForm, setCompanyForm] = useState({
@@ -203,7 +204,8 @@ const Configuration = () => {
                 is_active: entity.is_active,
                 latitude: entity.latitude || '',
                 longitude: entity.longitude || '',
-                price_list: entity.price_list || 'price_unit'
+                price_list: entity.price_list || 'price_unit',
+                visiting_days: entity.visiting_days || []
             });
         } else {
             setEntityForm({ name: entity.name, vehicle: entity.vehicle || '', phone: entity.phone || '', is_active: entity.is_active, username: entity.username || '', password: entity.password || '' });
@@ -538,7 +540,6 @@ const Configuration = () => {
             )}
 
             {activeSectionTab === 'entities' && (
-                /* Tab 2: Preventistas, Negocios & Repartidores CRUD loaders */
                 <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-h-0 overflow-y-auto pb-8 custom-scrollbar">
                     {/* Left Form Panel */}
                     <div className="lg:col-span-4 bg-white border border-analyst-150 rounded-2xl p-5 shadow-sm">
@@ -551,6 +552,7 @@ const Configuration = () => {
                                 {[
                                     { id: 'sellers', label: 'Preventistas' },
                                     { id: 'shops', label: 'Negocios' },
+                                    { id: 'routes', label: 'Rutas por Día' },
                                     { id: 'deliverers', label: 'Choferes' }
                                 ].map(tab => (
                                     <button
@@ -568,293 +570,383 @@ const Configuration = () => {
                                 ))}
                             </div>
 
-                            <div className="space-y-3">
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-black text-analyst-400 uppercase">Nombre Completo</label>
-                                    <input
-                                        type="text"
-                                        value={entityForm.name || ''}
-                                        required
-                                        onChange={(e) => setEntityForm(prev => ({ ...prev, name: e.target.value }))}
-                                        className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                    />
-                                </div>
-
-                                {activeEntityTab === 'sellers' && (
-                                    <div className="space-y-1">
-                                        <label className="text-[8px] font-black text-analyst-400 uppercase">Porcentaje Comisión (%)</label>
-                                        <input
-                                            type="number"
-                                            value={entityForm.commission || ''}
-                                            onChange={(e) => setEntityForm(prev => ({ ...prev, commission: parseFloat(e.target.value) || 0 }))}
-                                            className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                        />
-                                    </div>
-                                )}
-
-                                {activeEntityTab === 'shops' && (
-                                    <>
-                                        <div className="space-y-1">
-                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Dueño / Titular</label>
-                                            <input
-                                                type="text"
-                                                value={entityForm.owner || ''}
-                                                onChange={(e) => setEntityForm(prev => ({ ...prev, owner: e.target.value }))}
-                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Dirección Comercial</label>
-                                            <input
-                                                type="text"
-                                                value={entityForm.address || ''}
-                                                required
-                                                onChange={(e) => setEntityForm(prev => ({ ...prev, address: e.target.value }))}
-                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[8px] font-black text-analyst-400 uppercase">CUIT / Identificación</label>
-                                            <input
-                                                type="text"
-                                                value={entityForm.cuit || ''}
-                                                onChange={(e) => setEntityForm(prev => ({ ...prev, cuit: e.target.value }))}
-                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="space-y-1">
-                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Latitud (GPS)</label>
-                                                <input
-                                                    type="number"
-                                                    step="any"
-                                                    placeholder="Ej: -34.6037"
-                                                    value={entityForm.latitude || ''}
-                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) || '' }))}
-                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Longitud (GPS)</label>
-                                                <input
-                                                    type="number"
-                                                    step="any"
-                                                    placeholder="Ej: -58.3816"
-                                                    value={entityForm.longitude || ''}
-                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) || '' }))}
-                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                                />
-                                            </div>
-                                        </div>
+                            {activeEntityTab === 'routes' ? (
+                                <div className="space-y-2 pt-1">
+                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-2">Seleccionar Día de Ruta</p>
+                                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
                                         <button
+                                            key={day}
                                             type="button"
-                                            onClick={captureGPS}
-                                            className="w-full py-2 bg-slate-800 hover:bg-black text-white rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 shadow"
+                                            onClick={() => setSelectedRouteDay(day)}
+                                            className={`w-full py-2 px-3 text-left rounded-xl text-[10px] font-black transition-all border ${selectedRouteDay === day ? 'bg-primary border-primary text-white shadow shadow-primary/10' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                                         >
-                                            <span className="material-symbols-outlined text-[13px] font-black">my_location</span>
-                                            Obtener GPS Actual
+                                            📅 RUTA DEL {day.toUpperCase()}
                                         </button>
-
-                                        <div className="space-y-1">
-                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Lista de Precios Asignada</label>
-                                            <select
-                                                value={entityForm.price_list || 'price_unit'}
-                                                onChange={(e) => setEntityForm(prev => ({ ...prev, price_list: e.target.value }))}
-                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                            >
-                                                {Object.entries(priceLabels).map(([key, label]) => (
-                                                    <option key={key} value={key}>{label.toUpperCase()}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </>
-                                )}
-
-                                {activeEntityTab === 'deliverers' && (
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
                                     <div className="space-y-1">
-                                        <label className="text-[8px] font-black text-analyst-400 uppercase">Vehículo / Patente</label>
+                                        <label className="text-[8px] font-black text-analyst-400 uppercase">Nombre Completo</label>
                                         <input
                                             type="text"
-                                            value={entityForm.vehicle || ''}
-                                            onChange={(e) => setEntityForm(prev => ({ ...prev, vehicle: e.target.value }))}
+                                            value={entityForm.name || ''}
+                                            required
+                                            onChange={(e) => setEntityForm(prev => ({ ...prev, name: e.target.value }))}
                                             className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
                                         />
                                     </div>
-                                )}
 
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-black text-analyst-400 uppercase">Teléfono de Contacto</label>
-                                    <input
-                                        type="text"
-                                        value={entityForm.phone || ''}
-                                        onChange={(e) => setEntityForm(prev => ({ ...prev, phone: e.target.value }))}
-                                        className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
-                                    />
-                                </div>
-
-                                {activeEntityTab !== 'shops' && (
-                                    <>
+                                    {activeEntityTab === 'sellers' && (
                                         <div className="space-y-1">
-                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Usuario de Acceso Móvil</label>
+                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Porcentaje Comisión (%)</label>
                                             <input
-                                                type="text"
-                                                value={entityForm.username || ''}
-                                                onChange={(e) => setEntityForm(prev => ({ ...prev, username: e.target.value }))}
-                                                placeholder="Ej: juan.preventa"
+                                                type="number"
+                                                value={entityForm.commission || ''}
+                                                onChange={(e) => setEntityForm(prev => ({ ...prev, commission: parseFloat(e.target.value) || 0 }))}
                                                 className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
                                             />
                                         </div>
+                                    )}
+
+                                    {activeEntityTab === 'shops' && (
+                                        <>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Dueño / Titular</label>
+                                                <input
+                                                    type="text"
+                                                    value={entityForm.owner || ''}
+                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, owner: e.target.value }))}
+                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Dirección Comercial</label>
+                                                <input
+                                                    type="text"
+                                                    value={entityForm.address || ''}
+                                                    required
+                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, address: e.target.value }))}
+                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">CUIT / Identificación</label>
+                                                <input
+                                                    type="text"
+                                                    value={entityForm.cuit || ''}
+                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, cuit: e.target.value }))}
+                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1">
+                                                    <label className="text-[8px] font-black text-analyst-400 uppercase">Latitud (GPS)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        placeholder="Ej: -34.6037"
+                                                        value={entityForm.latitude || ''}
+                                                        onChange={(e) => setEntityForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) || '' }))}
+                                                        className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[8px] font-black text-analyst-400 uppercase">Longitud (GPS)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        placeholder="Ej: -58.3816"
+                                                        value={entityForm.longitude || ''}
+                                                        onChange={(e) => setEntityForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) || '' }))}
+                                                        className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={captureGPS}
+                                                className="w-full py-2 bg-slate-800 hover:bg-black text-white rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 shadow"
+                                            >
+                                                <span className="material-symbols-outlined text-[13px] font-black">my_location</span>
+                                                Obtener GPS Actual
+                                            </button>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Lista de Precios Asignada</label>
+                                                <select
+                                                    value={entityForm.price_list || 'price_unit'}
+                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, price_list: e.target.value }))}
+                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                >
+                                                    {Object.entries(priceLabels).map(([key, label]) => (
+                                                        <option key={key} value={key}>{label.toUpperCase()}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1 pt-2">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Días de Visita (Ruta)</label>
+                                                <div className="grid grid-cols-4 gap-2 border border-analyst-100 p-2 rounded-lg bg-white">
+                                                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => {
+                                                        const visitingDays = entityForm.visiting_days || [];
+                                                        const isChecked = visitingDays.includes(day);
+                                                        return (
+                                                            <label key={day} className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-700 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={(e) => {
+                                                                        const updatedDays = e.target.checked
+                                                                            ? [...visitingDays, day]
+                                                                            : visitingDays.filter(d => d !== day);
+                                                                        setEntityForm(prev => ({ ...prev, visiting_days: updatedDays }));
+                                                                    }}
+                                                                    className="rounded text-primary focus:ring-primary border-slate-300 w-3.5 h-3.5"
+                                                                />
+                                                                {day.slice(0, 3)}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {activeEntityTab === 'deliverers' && (
                                         <div className="space-y-1">
-                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Contraseña</label>
+                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Vehículo / Patente</label>
                                             <input
                                                 type="text"
-                                                value={entityForm.password || ''}
-                                                onChange={(e) => setEntityForm(prev => ({ ...prev, password: e.target.value }))}
-                                                placeholder="Contraseña de ingreso"
+                                                value={entityForm.vehicle || ''}
+                                                onChange={(e) => setEntityForm(prev => ({ ...prev, vehicle: e.target.value }))}
                                                 className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
                                             />
                                         </div>
-                                    </>
-                                )}
+                                    )}
 
-                                <div className="flex items-center justify-between p-3 bg-analyst-50 border border-analyst-100 rounded-xl">
-                                    <span className="text-[9px] font-black text-analyst-600 uppercase">Estado Activo</span>
-                                    <input
-                                        type="checkbox"
-                                        checked={entityForm.is_active !== false}
-                                        onChange={(e) => setEntityForm(prev => ({ ...prev, is_active: e.target.checked }))}
-                                        className="w-4 h-4 text-primary rounded border-analyst-300"
-                                    />
+                                    <div className="space-y-1">
+                                        <label className="text-[8px] font-black text-analyst-400 uppercase">Teléfono de Contacto</label>
+                                        <input
+                                            type="text"
+                                            value={entityForm.phone || ''}
+                                            onChange={(e) => setEntityForm(prev => ({ ...prev, phone: e.target.value }))}
+                                            className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                        />
+                                    </div>
+
+                                    {activeEntityTab !== 'shops' && (
+                                        <>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Usuario de Acceso Móvil</label>
+                                                <input
+                                                    type="text"
+                                                    value={entityForm.username || ''}
+                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, username: e.target.value }))}
+                                                    placeholder="Ej: juan.preventa"
+                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[8px] font-black text-analyst-400 uppercase">Contraseña</label>
+                                                <input
+                                                    type="text"
+                                                    value={entityForm.password || ''}
+                                                    onChange={(e) => setEntityForm(prev => ({ ...prev, password: e.target.value }))}
+                                                    placeholder="Contraseña de ingreso"
+                                                    className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div className="flex items-center justify-between p-3 bg-analyst-50 border border-analyst-100 rounded-xl">
+                                        <span className="text-[9px] font-black text-analyst-600 uppercase">Estado Activo</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={entityForm.is_active !== false}
+                                            onChange={(e) => setEntityForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                                            className="w-4 h-4 text-primary rounded border-analyst-300"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2">
+                                        {editingEntityId && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setEditingEntityId(null);
+                                                    setEntityForm({});
+                                                }}
+                                                className="flex-1 py-2 border border-slate-200 rounded-xl font-black uppercase text-[8.5px] hover:bg-slate-50"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        )}
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-2 bg-primary hover:bg-blue-700 text-white rounded-xl font-black uppercase text-[8.5px] shadow"
+                                        >
+                                            {editingEntityId ? 'Actualizar' : 'Cargar'}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="flex gap-2 pt-2">
-                                {editingEntityId && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setEditingEntityId(null);
-                                            setEntityForm({});
-                                        }}
-                                        className="flex-1 py-2 border border-slate-200 rounded-xl font-black uppercase text-[8.5px] hover:bg-slate-50"
-                                    >
-                                        Cancelar
-                                    </button>
-                                )}
-                                <button
-                                    type="submit"
-                                    className="flex-1 py-2 bg-primary hover:bg-blue-700 text-white rounded-xl font-black uppercase text-[8.5px] shadow"
-                                >
-                                    {editingEntityId ? 'Actualizar' : 'Cargar'}
-                                </button>
-                            </div>
+                            )}
                         </form>
                     </div>
 
                     {/* Right Lists Panel */}
                     <div className="lg:col-span-8 bg-white border border-analyst-150 rounded-2xl p-5 shadow-sm min-h-[450px]">
                         <h4 className="text-[11px] font-black uppercase text-analyst-800 mb-4 pb-2 border-b border-slate-100">
-                            Registros en el Sistema: {activeEntityTab === 'sellers' ? 'Preventistas' : activeEntityTab === 'shops' ? 'Negocios' : 'Choferes'}
+                            {activeEntityTab === 'routes' ? `Organizador de Rutas: Ruta del ${selectedRouteDay.toUpperCase()}` : `Registros en el Sistema: ${activeEntityTab === 'sellers' ? 'Preventistas' : activeEntityTab === 'shops' ? 'Negocios' : 'Choferes'}`}
                         </h4>
 
-                        <div className="overflow-auto rounded-xl border border-analyst-150 max-h-[400px] custom-scrollbar">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-analyst-900 text-white text-[8.5px] font-black uppercase">
-                                        <th className="px-4 py-2">NOMBRE</th>
-                                        <th className="px-4 py-2">CONTACTO</th>
-                                        {activeEntityTab === 'sellers' && <th className="px-4 py-2 w-24 text-center">COMISIÓN</th>}
-                                        {activeEntityTab === 'shops' && <th className="px-4 py-2">DIRECCIÓN</th>}
-                                        {activeEntityTab === 'deliverers' && <th className="px-4 py-2">VEHÍCULO</th>}
-                                        <th className="px-4 py-2 w-20 text-center">ESTADO</th>
-                                        <th className="px-4 py-2 w-24 text-center">ACCIONES</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-analyst-100 text-[10px] font-bold">
-                                    {activeEntityTab === 'sellers' && sellers.map(s => (
-                                        <tr key={s.id} className="hover:bg-slate-50/55">
-                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">
-                                                <p>{s.name}</p>
-                                                {s.username && (
-                                                    <p className="text-[7.5px] font-normal text-primary mt-0.5 lowercase font-mono">User: {s.username}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-2 font-mono text-analyst-500">{s.phone || '-'}</td>
-                                            <td className="px-4 py-2 text-center text-primary font-black">{s.commission}%</td>
-                                            <td className="px-4 py-2 text-center">
-                                                <span className={`px-2 py-0.5 rounded-full text-[8px] ${s.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>{s.is_active ? 'ACTIVO' : 'INACTIVO'}</span>
-                                            </td>
-                                            <td className="px-4 py-2 text-center">
-                                                <div className="flex gap-1.5 justify-center">
-                                                    <button onClick={() => editEntity(s)} className="p-1 text-primary hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">edit</span></button>
-                                                    <button onClick={() => deleteEntity(s.id)} className="p-1 text-red-500 hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">delete</span></button>
+                        {activeEntityTab === 'routes' ? (
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center bg-indigo-50 border border-indigo-100 p-3 rounded-xl">
+                                    <p className="text-[9.5px] font-bold text-indigo-700 uppercase">
+                                        Comercios asignados para visitar los días {selectedRouteDay}:
+                                    </p>
+                                    <span className="px-2 py-0.5 bg-indigo-600 text-white text-[8.5px] font-black rounded-lg">
+                                        {shops.filter(s => (s.visiting_days || []).includes(selectedRouteDay)).length}
+                                    </span>
+                                </div>
+                                <div className="overflow-y-auto max-h-[380px] divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white custom-scrollbar">
+                                    {shops.map(sh => {
+                                        const isAssigned = (sh.visiting_days || []).includes(selectedRouteDay);
+                                        return (
+                                            <div key={sh.id} className="flex justify-between items-center p-3 hover:bg-slate-50/50 transition-all">
+                                                <div>
+                                                    <p className="text-[10.5px] font-black text-slate-800 uppercase">{sh.name}</p>
+                                                    <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">{sh.address}</p>
                                                 </div>
-                                            </td>
+                                                <button
+                                                    onClick={async () => {
+                                                        const newDays = isAssigned
+                                                            ? (sh.visiting_days || []).filter(d => d !== selectedRouteDay)
+                                                            : [...(sh.visiting_days || []), selectedRouteDay];
+                                                        try {
+                                                            await axios.patch(`${API_URL}/negocios/${sh.id}`, { visiting_days: newDays });
+                                                            fetchData();
+                                                        } catch (e) {
+                                                            console.error(e);
+                                                        }
+                                                    }}
+                                                    className={`px-3 py-1 text-[8.5px] font-black uppercase rounded-lg border transition-all ${isAssigned ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                                                >
+                                                    {isAssigned ? 'ASIGNADO' : 'ASIGNAR'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="overflow-auto rounded-xl border border-analyst-150 max-h-[400px] custom-scrollbar">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-analyst-900 text-white text-[8.5px] font-black uppercase">
+                                            <th className="px-4 py-2">NOMBRE</th>
+                                            <th className="px-4 py-2">CONTACTO</th>
+                                            {activeEntityTab === 'sellers' && <th className="px-4 py-2 w-24 text-center">COMISIÓN</th>}
+                                            {activeEntityTab === 'shops' && <th className="px-4 py-2">DIRECCIÓN</th>}
+                                            {activeEntityTab === 'deliverers' && <th className="px-4 py-2">VEHÍCULO</th>}
+                                            <th className="px-4 py-2 w-20 text-center">ESTADO</th>
+                                            <th className="px-4 py-2 w-24 text-center">ACCIONES</th>
                                         </tr>
-                                    ))}
+                                    </thead>
+                                    <tbody className="divide-y divide-analyst-100 text-[10px] font-bold">
+                                        {activeEntityTab === 'sellers' && sellers.map(s => (
+                                            <tr key={s.id} className="hover:bg-slate-50/55">
+                                                <td className="px-4 py-2 uppercase text-slate-800 font-black">
+                                                    <p>{s.name}</p>
+                                                    {s.username && (
+                                                        <p className="text-[7.5px] font-normal text-primary mt-0.5 lowercase font-mono">User: {s.username}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2 font-mono text-analyst-500">{s.phone || '-'}</td>
+                                                <td className="px-4 py-2 text-center text-primary font-black">{s.commission}%</td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] ${s.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>{s.is_active ? 'ACTIVO' : 'INACTIVO'}</span>
+                                                </td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <div className="flex gap-1.5 justify-center">
+                                                        <button onClick={() => editEntity(s)} className="p-1 text-primary hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">edit</span></button>
+                                                        <button onClick={() => deleteEntity(s.id)} className="p-1 text-red-500 hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">delete</span></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
 
-                                    {activeEntityTab === 'shops' && shops.map(sh => (
-                                        <tr key={sh.id} className="hover:bg-slate-50/55">
-                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">
-                                                <p>{sh.name}</p>
-                                                <p className="text-[7.5px] font-normal text-analyst-400 mt-0.5">Dueño: {sh.owner || '-'}</p>
-                                                <p className="text-[7.5px] font-bold text-primary mt-0.5 uppercase">
-                                                    Lista: {priceLabels[sh.price_list] || 'PRECIO BASE'}
-                                                </p>
-                                                {sh.latitude && sh.longitude && (
-                                                    <p className="text-[7px] text-green-600 font-mono mt-0.5 flex items-center gap-0.5 font-black uppercase">
-                                                        <span className="material-symbols-outlined text-[9px] font-black">location_on</span>
-                                                        Ubicación GPS Guardada
+                                        {activeEntityTab === 'shops' && shops.map(sh => (
+                                            <tr key={sh.id} className="hover:bg-slate-50/55">
+                                                <td className="px-4 py-2 uppercase text-slate-800 font-black">
+                                                    <p>{sh.name}</p>
+                                                    <p className="text-[7.5px] font-normal text-analyst-400 mt-0.5">Dueño: {sh.owner || '-'}</p>
+                                                    <p className="text-[7.5px] font-bold text-primary mt-0.5 uppercase">
+                                                        Lista: {priceLabels[sh.price_list] || 'PRECIO BASE'}
                                                     </p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-2 font-mono text-analyst-500">
-                                                <p>{sh.phone || '-'}</p>
-                                                <p className="text-[7px]">CUIT: {sh.cuit || '-'}</p>
-                                            </td>
-                                            <td className="px-4 py-2 text-slate-600 uppercase">{sh.address}</td>
-                                            <td className="px-4 py-2 text-center">
-                                                <span className={`px-2 py-0.5 rounded-full text-[8px] ${sh.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>{sh.is_active ? 'ACTIVO' : 'INACTIVO'}</span>
-                                            </td>
-                                            <td className="px-4 py-2 text-center">
-                                                <div className="flex gap-1.5 justify-center">
-                                                    <button onClick={() => editEntity(sh)} className="p-1 text-primary hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">edit</span></button>
-                                                    <button onClick={() => deleteEntity(sh.id)} className="p-1 text-red-500 hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">delete</span></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {(sh.visiting_days || []).map(day => (
+                                                            <span key={day} className="px-1 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded text-[7px] font-bold">
+                                                                {day.slice(0,3).toUpperCase()}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    {sh.latitude && sh.longitude && (
+                                                        <p className="text-[7px] text-green-600 font-mono mt-0.5 flex items-center gap-0.5 font-black uppercase">
+                                                            <span className="material-symbols-outlined text-[9px] font-black">location_on</span>
+                                                            Ubicación GPS Guardada
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2 font-mono text-analyst-500">
+                                                    <p>{sh.phone || '-'}</p>
+                                                    <p className="text-[7px]">CUIT: {sh.cuit || '-'}</p>
+                                                </td>
+                                                <td className="px-4 py-2 text-slate-600 uppercase">{sh.address}</td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] ${sh.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>{sh.is_active ? 'ACTIVO' : 'INACTIVO'}</span>
+                                                </td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <div className="flex gap-1.5 justify-center">
+                                                        <button onClick={() => editEntity(sh)} className="p-1 text-primary hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">edit</span></button>
+                                                        <button onClick={() => deleteEntity(sh.id)} className="p-1 text-red-500 hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">delete</span></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
 
-                                    {activeEntityTab === 'deliverers' && deliverers.map(d => (
-                                        <tr key={d.id} className="hover:bg-slate-50/55">
-                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">
-                                                <p>{d.name}</p>
-                                                {d.username && (
-                                                    <p className="text-[7.5px] font-normal text-primary mt-0.5 lowercase font-mono">User: {d.username}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-2 font-mono text-analyst-500">{d.phone || '-'}</td>
-                                            <td className="px-4 py-2 text-slate-600 uppercase">{d.vehicle || '-'}</td>
-                                            <td className="px-4 py-2 text-center">
-                                                <span className={`px-2 py-0.5 rounded-full text-[8px] ${d.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>{d.is_active ? 'ACTIVO' : 'INACTIVO'}</span>
-                                            </td>
-                                            <td className="px-4 py-2 text-center">
-                                                <div className="flex gap-1.5 justify-center">
-                                                    <button onClick={() => editEntity(d)} className="p-1 text-primary hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">edit</span></button>
-                                                    <button onClick={() => deleteEntity(d.id)} className="p-1 text-red-500 hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">delete</span></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                        {activeEntityTab === 'deliverers' && deliverers.map(d => (
+                                            <tr key={d.id} className="hover:bg-slate-50/55">
+                                                <td className="px-4 py-2 uppercase text-slate-800 font-black">
+                                                    <p>{d.name}</p>
+                                                    {d.username && (
+                                                        <p className="text-[7.5px] font-normal text-primary mt-0.5 lowercase font-mono">User: {d.username}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2 font-mono text-analyst-500">{d.phone || '-'}</td>
+                                                <td className="px-4 py-2 text-slate-600 uppercase">{d.vehicle || '-'}</td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] ${d.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}>{d.is_active ? 'ACTIVO' : 'INACTIVO'}</span>
+                                                </td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <div className="flex gap-1.5 justify-center">
+                                                        <button onClick={() => editEntity(d)} className="p-1 text-primary hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">edit</span></button>
+                                                        <button onClick={() => deleteEntity(d.id)} className="p-1 text-red-500 hover:bg-slate-100 rounded"><span className="material-symbols-outlined text-xs">delete</span></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
-            ) }
+            )}
 
             {activeSectionTab === 'company' && (
-                /* Tab 3: Active Company Profile editor & uploader */
                 <div className="flex-1 bg-white border border-analyst-150 rounded-2xl p-6 shadow-sm overflow-y-auto pb-8 custom-scrollbar">
                     <div className="absolute top-0 left-0 w-2 h-full bg-primary"></div>
                     

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api_service.dart';
-import 'main.dart';
 
 class PreventistaScreen extends StatefulWidget {
   final Map<String, dynamic> userInfo;
@@ -31,6 +31,22 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
   // Cart State (variant_id -> {variant, product, quantity})
   final Map<String, Map<String, dynamic>> _cart = {};
+
+  Future<void> _openMap(dynamic latitude, dynamic longitude, String? address) async {
+    final lat = double.tryParse(latitude?.toString() ?? '');
+    final lng = double.tryParse(longitude?.toString() ?? '');
+    Uri uri;
+    if (lat != null && lng != null) {
+      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    } else if (address != null && address.isNotEmpty) {
+      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+    } else {
+      return;
+    }
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   double _getVariantPrice(dynamic variant) {
     final priceKey = _selectedShop?['price_list']?.toString() ?? 'price_unit';
@@ -390,7 +406,15 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                if (_selectedShop != null) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () => _openMap(_selectedShop!['latitude'], _selectedShop!['longitude'], _selectedShop!['address']),
+                    icon: const Icon(Icons.map, size: 16, color: Color(0xFF4F46E5)),
+                    label: const Text('VER UBICACIÓN EN MAPA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                  ),
+                ],
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(

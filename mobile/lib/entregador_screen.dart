@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api_service.dart';
 
 class EntregadorScreen extends StatefulWidget {
@@ -13,6 +14,22 @@ class EntregadorScreen extends StatefulWidget {
 class _EntregadorScreenState extends State<EntregadorScreen> {
   bool _isLoading = false;
   List<dynamic> _orders = [];
+
+  Future<void> _openMap(dynamic latitude, dynamic longitude, String? address) async {
+    final lat = double.tryParse(latitude?.toString() ?? '');
+    final lng = double.tryParse(longitude?.toString() ?? '');
+    Uri uri;
+    if (lat != null && lng != null) {
+      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    } else if (address != null && address.isNotEmpty) {
+      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+    } else {
+      return;
+    }
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   void initState() {
@@ -241,15 +258,19 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
                       Text('Contacto: ${shop['owner']} (${shop['phone'] ?? '-'})', style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569))),
                       const SizedBox(height: 4),
                     ],
-                    if (shop['latitude'] != null && shop['longitude'] != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: Color(0xFF10B981), size: 14),
-                          const SizedBox(width: 4),
-                          Text('GPS: ${shop['latitude']}, ${shop['longitude']}',
-                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
-                        ],
+                    if (shop['latitude'] != null || shop['address'] != null) ...[
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4F46E5).withOpacity(0.08),
+                          foregroundColor: const Color(0xFF4F46E5),
+                          elevation: 0,
+                          minimumSize: const Size(double.infinity, 38),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => _openMap(shop['latitude'], shop['longitude'], shop['address']),
+                        icon: const Icon(Icons.map, size: 14),
+                        label: const Text('VER UBICACIÓN EN MAPA', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
                       ),
                       const SizedBox(height: 8),
                     ],

@@ -100,21 +100,6 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
     });
   }
 
-  void _updateCartQty(dynamic variant, dynamic product, int newQty) {
-    setState(() {
-      final id = variant['id'].toString();
-      if (newQty <= 0) {
-        _cart.remove(id);
-      } else {
-        _cart[id] = {
-          'variant': variant,
-          'product': product,
-          'quantity': newQty,
-        };
-      }
-    });
-  }
-
   double _getCartTotal() {
     double total = 0;
     _cart.forEach((key, item) {
@@ -217,7 +202,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
   }
 
   Color _hexToColor(String? hexString) {
-    if (hexString == null || hexString.isEmpty) return Colors.cyan;
+    if (hexString == null || hexString.isEmpty) return const Color(0xFF4F46E5);
     final buffer = StringBuffer();
     if (hexString.length == 7) buffer.write('ff');
     buffer.write(hexString.replaceFirst('#', ''));
@@ -226,7 +211,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = Colors.cyan.shade700;
+    final themeColor = const Color(0xFF4F46E5);
 
     return Scaffold(
       appBar: AppBar(
@@ -285,29 +270,52 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.playlist_add_check_outlined, size: 100, color: AppColors.slate),
-              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withOpacity(0.06),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.playlist_add_check, size: 80, color: Color(0xFF4F46E5)),
+              ),
+              const SizedBox(height: 24),
               const Text(
                 'Generador de Pedidos',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Presiona el botón para comenzar a levantar un nuevo pedido.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.slate),
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              const SizedBox(height: 36),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4F46E5), Color(0xFF3B82F6)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4F46E5).withOpacity(0.25),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
                 ),
-                onPressed: () => setState(() => _orderActive = true),
-                child: const Text(
-                  'EMPEZAR NUEVO PEDIDO',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  onPressed: () => setState(() => _orderActive = true),
+                  child: const Text(
+                    'EMPEZAR NUEVO PEDIDO',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1),
+                  ),
                 ),
               ),
             ],
@@ -332,80 +340,106 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
   // STEP 0: SELECT CLIENT
   Widget _buildShopSelectorStep(Color themeColor) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'SELECCIONAR CLIENTE',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<dynamic>(
-                isExpanded: true,
-                dropdownColor: const Color(0xFF1E293B),
-                hint: const Text('Toca para buscar negocio...'),
-                value: _selectedShop,
-                items: _shops.map<DropdownMenuItem<dynamic>>((shop) {
-                  return DropdownMenuItem<dynamic>(
-                    value: shop,
-                    child: Text('${shop['name']} (${shop['address']})', style: const TextStyle(fontSize: 13, color: Colors.white)),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  setState(() => _selectedShop = val);
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: Colors.grey),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: _resetOrder,
-                  child: const Text('CANCELAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Card(
+          elevation: 8,
+          shadowColor: Colors.black.withOpacity(0.04),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'SELECCIONAR CLIENTE',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 1),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: _selectedShop == null
-                      ? null
-                      : () => setState(() => _wizardLevel = 1),
-                  child: const Text('SIGUIENTE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Selecciona el negocio que realiza el pedido',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9), // Light grey fill
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<dynamic>(
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      hint: const Text('Toca para buscar negocio...', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                      value: _selectedShop,
+                      items: _shops.map<DropdownMenuItem<dynamic>>((shop) {
+                        return DropdownMenuItem<dynamic>(
+                          value: shop,
+                          child: Text('${shop['name']} (${shop['address']})', style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() => _selectedShop = val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: _resetOrder,
+                        child: const Text('CANCELAR', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w800, fontSize: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: _selectedShop == null
+                              ? null
+                              : const LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF3B82F6)]),
+                          color: _selectedShop == null ? Colors.grey[200] : null,
+                        ),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          onPressed: _selectedShop == null
+                              ? null
+                              : () => setState(() => _wizardLevel = 1),
+                          child: const Text('SIGUIENTE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   // STEP 1: FAMILIES GRID
   Widget _buildFamiliesStep(Color themeColor) {
-    // Extract unique families from products
     final familiesMap = <String, Map<String, dynamic>>{};
     for (var p in _products) {
       final f = p['families'];
@@ -417,7 +451,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
     return Column(
       children: [
-        _buildWizardHeader('Familias', 'Selecciona una categoría principal'),
+        _buildWizardHeader('Categorías', 'Selecciona una familia de productos'),
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -432,31 +466,38 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
               final fam = uniqueFamilies[index];
               final color = _hexToColor(fam['color']);
 
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedFamilyId = fam['id'].toString();
-                    _selectedFamilyName = fam['name'];
-                    _wizardLevel = 2; // Go to Groups
-                  });
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-                  ),
+              return Card(
+                elevation: 4,
+                shadowColor: Colors.black.withOpacity(0.04),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                color: Colors.white,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    setState(() {
+                      _selectedFamilyId = fam['id'].toString();
+                      _selectedFamilyName = fam['name'];
+                      _wizardLevel = 2; // Go to Groups
+                    });
+                  },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(_getIconData(fam['icon']), size: 40, color: color),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(_getIconData(fam['icon']), size: 32, color: color),
+                      ),
                       const SizedBox(height: 12),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
                           fam['name'].toString().toUpperCase(),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Colors.white),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Color(0xFF0F172A)),
                         ),
                       ),
                     ],
@@ -473,7 +514,6 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
   // STEP 2: GROUPS GRID
   Widget _buildGroupsStep(Color themeColor) {
-    // Extract unique groups belonging to selected family
     final groupsMap = <String, Map<String, dynamic>>{};
     for (var p in _products) {
       if (p['family_id']?.toString() == _selectedFamilyId) {
@@ -488,13 +528,13 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
     return Column(
       children: [
         _buildWizardHeader(
-          'Grupos - $_selectedFamilyName',
+          _selectedFamilyName ?? 'Grupos',
           'Selecciona una subcategoría',
           backAction: () => setState(() => _wizardLevel = 1),
         ),
         Expanded(
           child: uniqueGroups.isEmpty
-              ? const Center(child: Text('No hay grupos en esta familia.'))
+              ? const Center(child: Text('No hay subcategorías en esta familia.'))
               : GridView.builder(
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -506,31 +546,38 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                   itemCount: uniqueGroups.length,
                   itemBuilder: (context, index) {
                     final grp = uniqueGroups[index];
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedGroupId = grp['id'].toString();
-                          _selectedGroupName = grp['name'];
-                          _wizardLevel = 3; // Go to Products
-                        });
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white10),
-                        ),
+                    return Card(
+                      elevation: 4,
+                      shadowColor: Colors.black.withOpacity(0.04),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      color: Colors.white,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          setState(() {
+                            _selectedGroupId = grp['id'].toString();
+                            _selectedGroupName = grp['name'];
+                            _wizardLevel = 3; // Go to Products
+                          });
+                        },
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.folder_open, size: 30, color: AppColors.slate),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4F46E5).withOpacity(0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.folder_outlined, size: 24, color: Color(0xFF4F46E5)),
+                            ),
                             const SizedBox(height: 8),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 grp['name'].toString().toUpperCase(),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white),
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Color(0xFF0F172A)),
                               ),
                             ),
                           ],
@@ -555,7 +602,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
     return Column(
       children: [
         _buildWizardHeader(
-          '$_selectedGroupName',
+          _selectedGroupName ?? 'Artículos',
           'Toca un artículo para definir cantidades',
           backAction: () => setState(() => _wizardLevel = 2),
         ),
@@ -570,34 +617,47 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                     final prodId = prod['id'];
                     final prodVariants = _variants.where((v) => v['product_id'] == prodId).toList();
 
-                    // Calculate items of this product already in cart
                     int cartCount = 0;
                     for (var v in prodVariants) {
                       cartCount += _cart[v['id'].toString()]?['quantity'] as int? ?? 0;
                     }
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      elevation: 3,
+                      shadowColor: Colors.black.withOpacity(0.03),
+                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: ListTile(
                         onTap: () => _showVariantPickerModal(prod, prodVariants),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         title: Text(
                           prod['name'].toString().toUpperCase(),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: Color(0xFF0F172A)),
                         ),
                         subtitle: prod['description'] != null
-                            ? Text(prod['description'], style: const TextStyle(fontSize: 10, color: AppColors.slate))
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(prod['description'], style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                              )
                             : null,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (cartCount > 0)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                                child: Text('$cartCount agregados', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 10)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '$cartCount AGREGADOS',
+                                  style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.w900, fontSize: 9),
+                                ),
                               ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.slate),
+                            const Icon(Icons.arrow_forward_ios, size: 12, color: Color(0xFF94A3B8)),
                           ],
                         ),
                       ),
@@ -613,8 +673,12 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
   // HELPER HEADERS AND BUTTONS
   Widget _buildWizardHeader(String title, String subtitle, {VoidCallback? backAction}) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      color: const Color(0xFF1E293B),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF4F46E5), Color(0xFF3B82F6)],
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -624,13 +688,16 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
               if (backAction != null)
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade700,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     minimumSize: Size.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: backAction,
-                  icon: const Icon(Icons.arrow_back, size: 14),
-                  label: const Text('ATRÁS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.arrow_back, size: 12, color: Colors.white),
+                  label: const Text('ATRÁS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
                 )
               else
                 const SizedBox(width: 60),
@@ -638,7 +705,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                 child: Text(
                   title.toUpperCase(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white, letterSpacing: 0.5),
                 ),
               ),
               const SizedBox(width: 60),
@@ -648,7 +715,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10, color: AppColors.slate),
+            style: TextStyle(fontSize: 10.5, color: Colors.white.withOpacity(0.8)),
           ),
         ],
       ),
@@ -657,20 +724,17 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
   Widget _buildCancelBottomButton() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
-      ),
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          side: const BorderSide(color: Colors.redAccent),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: const BorderSide(color: Color(0xFFF1F5F9), width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         onPressed: _resetOrder,
         child: const Center(
-          child: Text('CANCELAR Y LIMPIAR PEDIDO', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+          child: Text('CANCELAR PEDIDO', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5)),
         ),
       ),
     );
@@ -678,10 +742,12 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
   Widget _buildCartBottomBar(Color themeColor) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, -3))
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -693,25 +759,40 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
               children: [
                 Text(
                   'Total: \$${_getCartTotal().toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.green),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF10B981)),
                 ),
-                Text('${_cart.length} productos en carrito', style: const TextStyle(fontSize: 10, color: AppColors.slate)),
+                Text('${_cart.length} artículos en el carrito', style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
               ],
             ),
           ),
           OutlinedButton(
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.red),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: _resetOrder,
-            child: const Text('BORRAR', style: TextStyle(color: Colors.red, fontSize: 10)),
+            child: const Text('BORRAR', style: TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: themeColor, padding: const EdgeInsets.symmetric(horizontal: 16)),
-            onPressed: _cart.isEmpty ? null : _submitOrder,
-            child: const Text('ENVIAR PEDIDO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: _cart.isEmpty
+                  ? null
+                  : const LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF3B82F6)]),
+              color: _cart.isEmpty ? Colors.grey[200] : null,
+            ),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _cart.isEmpty ? null : _submitOrder,
+              child: const Text('ENVIAR PEDIDO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11)),
+            ),
           ),
         ],
       ),
@@ -723,17 +804,17 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -742,19 +823,18 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                   Text(
                     product['name'].toString().toUpperCase(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                   ),
                   if (product['description'] != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       product['description'],
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 10, color: AppColors.slate),
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                   ],
-                  const Divider(height: 24, color: Colors.white10),
+                  const Divider(height: 24, color: Color(0xFFF1F5F9)),
 
-                  // Variants list mapping
                   Flexible(
                     child: ListView.builder(
                       shrinkWrap: true,
@@ -766,7 +846,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                         final currentQty = _cart[vId]?['quantity'] as int? ?? 0;
 
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -774,35 +854,44 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(v['name'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    Text(v['name'], style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                                     const SizedBox(height: 2),
-                                    Text('\$${price.toStringAsFixed(2)} • Stock: ${v['stock'] ?? 0}', style: const TextStyle(fontSize: 11, color: AppColors.green)),
+                                    Text('\$${price.toStringAsFixed(2)} • Stock: ${v['stock'] ?? 0}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 24),
-                                    onPressed: () {
-                                      _removeFromCart(vId);
-                                      setModalState(() {});
-                                      setState(() {});
-                                    },
-                                  ),
-                                  Text(
-                                    '$currentQty',
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, color: Colors.cyan, size: 24),
-                                    onPressed: () {
-                                      _addToCart(v, product);
-                                      setModalState(() {});
-                                      setState(() {});
-                                    },
-                                  ),
-                                ],
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                                      onPressed: () {
+                                        _removeFromCart(vId);
+                                        setModalState(() {});
+                                        setState(() {});
+                                      },
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Text(
+                                        '$currentQty',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFF4F46E5), size: 20),
+                                      onPressed: () {
+                                        _addToCart(v, product);
+                                        setModalState(() {});
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
                               )
                             ],
                           ),
@@ -810,14 +899,15 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.cyan.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: const Color(0xFF4F46E5),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('LISTO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text('GUARDAR Y VOLVER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
                   ),
                 ],
               ),
@@ -843,33 +933,36 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
         final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(date);
         final status = order['status'].toString().toUpperCase();
 
-        Color statusColor = AppColors.orange;
-        if (status == 'ENTREGADO') statusColor = AppColors.green;
-        if (status == 'NO ENTREGADO') statusColor = AppColors.red;
-        if (status == 'EN TRANSPORTE') statusColor = AppColors.blue;
-        if (status == 'PENDIENTE') statusColor = AppColors.orange;
+        Color statusColor = const Color(0xFFF59E0B); // Pending -> Amber
+        if (status == 'ENTREGADO') statusColor = const Color(0xFF10B981); // Green
+        if (status == 'NO ENTREGADO') statusColor = const Color(0xFFEF4444); // Red
+        if (status == 'EN TRANSPORTE') statusColor = const Color(0xFF3B82F6); // Blue
 
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.04),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          color: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ExpansionTile(
             title: Text(
               '${order['negocios']?['name']?.toString().toUpperCase() ?? 'Negocio Desconocido'} (#${order['id'].toString().substring(0, 8).toUpperCase()})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
             ),
-            subtitle: Text('$formattedDate - \$${total.toStringAsFixed(2)}'),
+            subtitle: Text('$formattedDate - \$${total.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
             trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: statusColor.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-              child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 9)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+              child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.w900, fontSize: 8.5)),
             ),
             children: [
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('PRODUCTOS:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: AppColors.slate)),
-                    const SizedBox(height: 4),
+                    const Text('PRODUCTOS:', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, color: Color(0xFF94A3B8), letterSpacing: 0.5)),
+                    const SizedBox(height: 8),
                     Column(
                       children: (order['order_items'] as List).map<Widget>((it) {
                         final qty = it['quantity'];
@@ -879,32 +972,32 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                         final pName = it['product_variants']?['products']?['name'] ?? 'Producto';
 
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('$qty x $pName ($vName)', style: const TextStyle(fontSize: 11)),
-                              Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                              Text('$qty x $pName ($vName)', style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
+                              Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF0F172A))),
                             ],
                           ),
                         );
                       }).toList(),
                     ),
                     if (order['failure_reason'] != null) ...[
-                      const Divider(),
+                      const Divider(height: 24, color: Color(0xFFF1F5F9)),
                       Text(
                         'Motivo de fallo: ${order['failure_reason']}',
-                        style: const TextStyle(color: AppColors.red, fontWeight: FontWeight.bold, fontSize: 10),
+                        style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 10.5),
                       ),
                     ],
                     if (status == 'PENDIENTE' || status == 'PENDING_PREPARATION') ...[
-                      const Divider(height: 20),
+                      const Divider(height: 24, color: Color(0xFFF1F5F9)),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyan.shade700,
+                          backgroundColor: const Color(0xFF4F46E5),
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 36),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          minimumSize: const Size(double.infinity, 44),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () {
                           setState(() {
@@ -928,7 +1021,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                           });
                         },
                         icon: const Icon(Icons.edit, size: 14),
-                        label: const Text('EDITAR PEDIDO PENDIENTE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        label: const Text('EDITAR PEDIDO PENDIENTE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                       ),
                     ],
                   ],
@@ -939,5 +1032,17 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
         );
       },
     );
+  }
+}
+extension ButtonStyleExtension on ButtonStyle {
+  Widget build(Widget child) {
+    if (child is ElevatedButton) {
+      return ElevatedButton(
+        style: this,
+        onPressed: child.onPressed,
+        child: child.child,
+      );
+    }
+    return child;
   }
 }

@@ -17,18 +17,58 @@ class MyApp extends StatelessWidget {
       title: 'Distribuidora Movil',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.light,
-        primarySwatch: Colors.cyan,
-        scaffoldBackgroundColor: const Color(0xFFF1F5F9), // Slate 100
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4F46E5), // Indigo 600
+          primary: const Color(0xFF4F46E5),
+          secondary: const Color(0xFF06B6D4), // Cyan
+          background: const Color(0xFFF8FAFC), // Slate 50 (clean light background)
+          surface: Colors.white,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         cardColor: Colors.white,
+        cardTheme: CardThemeData(
+          elevation: 2,
+          shadowColor: Colors.black.withOpacity(0.04),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF4F46E5),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)), // Slate 200
           ),
-          hintStyle: const TextStyle(color: AppColors.slate),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
+          ),
+          hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13), // Slate 400
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
+          selectedItemColor: Color(0xFF4F46E5),
+          unselectedItemColor: Color(0xFF94A3B8),
+          elevation: 8,
         ),
       ),
       home: const SessionGateway(),
@@ -141,88 +181,146 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Premium look logo
-                const Icon(
-                  Icons.local_shipping_outlined,
-                  size: 80,
-                  color: Colors.cyan,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'SISTEMA MÓVIL',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                    color: Colors.blueGrey,
-                  ),
-                ),
-                const Text(
-                  'Distribuidora & Logística',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 48),
-
-                // Inputs
-                TextField(
-                  controller: _userController,
-                  decoration: const InputDecoration(
-                    hintText: 'Usuario móvil',
-                    prefixIcon: Icon(Icons.person, color: Colors.cyan),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Contraseña',
-                    prefixIcon: Icon(Icons.lock, color: Colors.cyan),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                if (_errorMsg.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      '⚠️ $_errorMsg',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                  ),
-
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyan.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF4F46E5), // Indigo 600
+              Color(0xFF3B82F6), // Blue 500
+              Color(0xFF06B6D4), // Cyan 500
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Card(
+                elevation: 12,
+                shadowColor: Colors.black.withOpacity(0.15),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Modern Rounded Icon Container
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4F46E5).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.local_shipping,
+                            size: 48,
+                            color: Color(0xFF4F46E5),
                           ),
                         ),
-                        onPressed: _handleLogin,
-                        child: const Text(
-                          'INGRESAR AL SISTEMA',
-                          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'SISTEMA MÓVIL',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
-              ],
+                      const Text(
+                        'Distribuidora & Logística',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Username Input
+                      TextField(
+                        controller: _userController,
+                        decoration: const InputDecoration(
+                          hintText: 'Usuario móvil',
+                          prefixIcon: Icon(Icons.person_outline, color: Color(0xFF4F46E5), size: 20),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password Input
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Contraseña',
+                          prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF4F46E5), size: 20),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      if (_errorMsg.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            '⚠️ $_errorMsg',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF4F46E5),
+                                    Color(0xFF3B82F6),
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF4F46E5).withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: _handleLogin,
+                                child: const Text(
+                                  'INGRESAR AL SISTEMA',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),

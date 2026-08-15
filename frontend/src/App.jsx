@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // Trigger new Vercel production build
 import axios from 'axios';
 import { API_URL } from './config';
 import Inventory from './components/Inventory';

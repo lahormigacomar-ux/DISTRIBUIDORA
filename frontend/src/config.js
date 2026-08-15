@@ -1,4 +1,10 @@
 const isElectron = window && window.process && window.process.type === 'renderer';
 
-export const API_URL = import.meta.env.VITE_API_URL || 
+let rawUrl = import.meta.env.VITE_API_URL || 
     ((import.meta.env.PROD && !isElectron) ? 'https://distribuidorabackend.vercel.app/api' : 'http://localhost:5000/api');
+
+if (rawUrl && !rawUrl.startsWith('http://') && !rawUrl.startsWith('https://') && !rawUrl.startsWith('/')) {
+    rawUrl = 'https://' + rawUrl;
+}
+
+export const API_URL = rawUrl;

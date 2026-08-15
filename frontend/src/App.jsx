@@ -58,7 +58,12 @@ function App() {
             }
         } catch (error) {
             console.error(error);
-            setAuthError(error.response?.data?.error || 'Error de conexión con el servidor.');
+            const errMsg = error.response?.data?.error;
+            setAuthError(
+                typeof errMsg === 'object'
+                    ? (errMsg.message || errMsg.details || JSON.stringify(errMsg))
+                    : (errMsg || 'Error de conexión con el servidor.')
+            );
         } finally {
             setAuthLoading(false);
         }
@@ -124,7 +129,7 @@ function App() {
                     <form onSubmit={handleAuthSubmit} className="p-8 space-y-4 text-[11px] font-bold text-slate-300">
                         {authError && (
                             <div className="p-3.5 bg-red-500/10 border border-red-500/35 rounded-xl text-red-400 text-[10px] font-bold uppercase tracking-wide">
-                                ⚠️ {authError}
+                                ⚠️ {typeof authError === 'object' ? (authError.message || JSON.stringify(authError)) : authError}
                             </div>
                         )}
 

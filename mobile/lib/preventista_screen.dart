@@ -27,9 +27,15 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
   String? _selectedFamilyName;
   String? _selectedGroupId;
   String? _selectedGroupName;
+  String? _editingOrderId;
 
   // Cart State (variant_id -> {variant, product, quantity})
   final Map<String, Map<String, dynamic>> _cart = {};
+
+  double _getVariantPrice(dynamic variant) {
+    final priceKey = _selectedShop?['price_list']?.toString() ?? 'price_unit';
+    return double.tryParse(variant[priceKey]?.toString() ?? '') ?? double.tryParse(variant['price_unit']?.toString() ?? '') ?? 0.0;
+  }
 
   @override
   void initState() {
@@ -112,7 +118,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
   double _getCartTotal() {
     double total = 0;
     _cart.forEach((key, item) {
-      final price = double.tryParse(item['variant']['price_unit'].toString()) ?? 0.0;
+      final price = _getVariantPrice(item['variant']);
       total += price * item['quantity'];
     });
     return total;
@@ -138,20 +144,28 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
         return {
           'variant_id': item['variant']['id'],
           'quantity': item['quantity'],
-          'price_unit': double.tryParse(item['variant']['price_unit'].toString()) ?? 0.0,
+          'price_unit': _getVariantPrice(item['variant']),
         };
       }).toList();
 
-      await ApiService.createOrder({
-        'seller_id': widget.userInfo['id'],
-        'shop_id': _selectedShop!['id'],
-        'items': items,
-        'status': 'pendiente',
-      });
+      if (_editingOrderId != null) {
+        await ApiService.updateOrder(_editingOrderId!, {
+          'shop_id': _selectedShop!['id'],
+          'items': items,
+        });
+      } else {
+        await ApiService.createOrder({
+          'seller_id': widget.userInfo['id'],
+          'shop_id': _selectedShop!['id'],
+          'items': items,
+          'status': 'pendiente',
+        });
+      }
 
       setState(() {
         _cart.clear();
         _selectedShop = null;
+        _editingOrderId = null;
         _orderActive = false;
         _wizardLevel = 0;
         _currentTab = 1; // Go to History tab
@@ -159,7 +173,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Pedido enviado con éxito!')),
+          SnackBar(content: Text(_editingOrderId != null ? '¡Pedido actualizado con éxito!' : '¡Pedido enviado con éxito!')),
         );
       }
 
@@ -183,6 +197,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
       _selectedShop = null;
       _selectedFamilyId = null;
       _selectedGroupId = null;
+      _editingOrderId = null;
       _orderActive = false;
       _wizardLevel = 0;
     });
@@ -747,7 +762,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                       itemBuilder: (context, vIndex) {
                         final v = productVariants[vIndex];
                         final vId = v['id'].toString();
-                        final price = double.tryParse(v['price_unit'].toString()) ?? 0.0;
+                        final price = _getVariantPrice(v);
                         final currentQty = _cart[vId]?['quantity'] as int? ?? 0;
 
                         return Padding(
@@ -761,7 +776,7 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                                   children: [
                                     Text(v['name'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
                                     const SizedBox(height: 2),
-                                    Text('\$${price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: AppColors.green)),
+                                    Text('\$${price.toStringAsFixed(2)} • Stock: ${v['stock'] ?? 0}', style: const TextStyle(fontSize: 11, color: AppColors.green)),
                                   ],
                                 ),
                               ),
@@ -879,6 +894,40 @@ class _PreventistaScreenState extends State<PreventistaScreen> {
                       Text(
                         'Motivo de fallo: ${order['failure_reason']}',
                         style: const TextStyle(color: AppColors.red, fontWeight: FontWeight.bold, fontSize: 10),
+                      ),
+                    ],
+                    if (status == 'PENDIENTE' || status == 'PENDING_PREPARATION') ...[
+                      const Divider(height: 20),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan.shade700,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 36),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _editingOrderId = order['id'].toString();
+                            _selectedShop = order['negocios'];
+                            _cart.clear();
+                            for (var it in order['order_items']) {
+                              final variant = it['product_variants'];
+                              if (variant != null) {
+                                final vId = variant['id'].toString();
+                                _cart[vId] = {
+                                  'variant': variant,
+                                  'product': variant['products'],
+                                  'quantity': it['quantity'],
+                                };
+                              }
+                            }
+                            _orderActive = true;
+                            _wizardLevel = 1;
+                            _currentTab = 0;
+                          });
+                        },
+                        icon: const Icon(Icons.edit, size: 14),
+                        label: const Text('EDITAR PEDIDO PENDIENTE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ],

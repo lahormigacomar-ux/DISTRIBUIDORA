@@ -114,6 +114,22 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> updateOrder(String orderId, Map<String, dynamic> orderData) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      Uri.parse('$baseUrl/orders/$orderId'),
+      headers: headers,
+      body: jsonEncode(orderData),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final errData = jsonDecode(response.body);
+      throw Exception(errData['error'] ?? 'Error al actualizar el pedido.');
+    }
+  }
+
   static Future<void> updateOrderStatus(String orderId, String status, {String? failureReason}) async {
     final headers = await _getHeaders();
     final response = await http.patch(

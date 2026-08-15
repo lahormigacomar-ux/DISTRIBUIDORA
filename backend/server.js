@@ -1206,14 +1206,15 @@ app.get('/api/negocios', async (req, res) => {
 });
 
 app.post('/api/negocios', async (req, res) => {
-    const { name, owner, address, phone, cuit, is_active, latitude, longitude } = req.body;
+    const { name, owner, address, phone, cuit, is_active, latitude, longitude, price_list } = req.body;
     const companyId = req.headers['x-company-id'];
     const { data, error } = await supabase.from('negocios').insert([{
         name, owner, address, phone, cuit, 
         is_active: is_active !== false, 
         company_id: companyId,
         latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null
+        longitude: longitude ? parseFloat(longitude) : null,
+        price_list: price_list || 'price_unit'
     }]).select();
     if (error) return res.status(500).json(error);
     res.json(data[0]);
@@ -1342,6 +1343,57 @@ app.post('/api/orders', async (req, res) => {
         res.json(oData[0]);
     } catch (err) {
         console.error('Error creating order:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    const { items, shop_id } = req.body;
+    try {
+        const { data: order, error: fetchErr } = await supabase.from('orders').select('*').eq('id', id).single();
+        if (fetchErr || !order) return res.status(404).json({ error: 'Pedido no encontrado' });
+        
+        const isPending = order.status === 'pendiente' || order.status === 'pending_preparation';
+        if (!isPending) {
+            return res.status(400).json({ error: 'El pedido ya no se puede editar porque su estado ha cambiado.' });
+        }
+
+        let total = 0;
+        if (items && Array.isArray(items)) {
+            items.forEach(it => {
+                total += (parseFloat(it.price_unit) || 0) * (parseInt(it.quantity) || 0);
+            });
+        }
+
+        const { error: deleteErr } = await supabase.from('order_items').delete().eq('order_id', id);
+        if (deleteErr) throw deleteErr;
+
+        if (items && Array.isArray(items) && items.length > 0) {
+            const itemsWithOrderId = items.map(it => ({
+                order_id: id,
+                variant_id: it.variant_id,
+                quantity: parseInt(it.quantity) || 0,
+                price_unit: parseFloat(it.price_unit) || 0,
+                total: (parseFloat(it.price_unit) || 0) * (parseInt(it.quantity) || 0)
+            }));
+
+            const { error: itemsError } = await supabase.from('order_items').insert(itemsWithOrderId);
+            if (itemsError) throw itemsError;
+        }
+
+        const updateData = { total };
+        if (shop_id) updateData.shop_id = shop_id;
+
+        const { data: updatedOrder, error: updateErr } = await supabase.from('orders')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+        
+        if (updateErr) throw updateErr;
+        res.json(updatedOrder[0]);
+    } catch (err) {
+        console.error('Error updating order:', err);
         res.status(500).json({ error: err.message });
     }
 });

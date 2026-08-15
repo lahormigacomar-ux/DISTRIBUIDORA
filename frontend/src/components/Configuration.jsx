@@ -202,7 +202,8 @@ const Configuration = () => {
                 cuit: entity.cuit || '', 
                 is_active: entity.is_active,
                 latitude: entity.latitude || '',
-                longitude: entity.longitude || ''
+                longitude: entity.longitude || '',
+                price_list: entity.price_list || 'price_unit'
             });
         } else {
             setEntityForm({ name: entity.name, vehicle: entity.vehicle || '', phone: entity.phone || '', is_active: entity.is_active, username: entity.username || '', password: entity.password || '' });
@@ -653,6 +654,19 @@ const Configuration = () => {
                                             <span className="material-symbols-outlined text-[13px] font-black">my_location</span>
                                             Obtener GPS Actual
                                         </button>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Lista de Precios Asignada</label>
+                                            <select
+                                                value={entityForm.price_list || 'price_unit'}
+                                                onChange={(e) => setEntityForm(prev => ({ ...prev, price_list: e.target.value }))}
+                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                            >
+                                                {Object.entries(priceLabels).map(([key, label]) => (
+                                                    <option key={key} value={key}>{label.toUpperCase()}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </>
                                 )}
 
@@ -784,6 +798,9 @@ const Configuration = () => {
                                             <td className="px-4 py-2 uppercase text-slate-800 font-black">
                                                 <p>{sh.name}</p>
                                                 <p className="text-[7.5px] font-normal text-analyst-400 mt-0.5">Dueño: {sh.owner || '-'}</p>
+                                                <p className="text-[7.5px] font-bold text-primary mt-0.5 uppercase">
+                                                    Lista: {priceLabels[sh.price_list] || 'PRECIO BASE'}
+                                                </p>
                                                 {sh.latitude && sh.longitude && (
                                                     <p className="text-[7px] text-green-600 font-mono mt-0.5 flex items-center gap-0.5 font-black uppercase">
                                                         <span className="material-symbols-outlined text-[9px] font-black">location_on</span>

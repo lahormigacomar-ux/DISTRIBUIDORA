@@ -192,7 +192,7 @@ const Configuration = () => {
     const editEntity = (entity) => {
         setEditingEntityId(entity.id);
         if (activeEntityTab === 'sellers') {
-            setEntityForm({ name: entity.name, phone: entity.phone || '', commission: entity.commission || 0, is_active: entity.is_active });
+            setEntityForm({ name: entity.name, phone: entity.phone || '', commission: entity.commission || 0, is_active: entity.is_active, username: entity.username || '', password: entity.password || '' });
         } else if (activeEntityTab === 'shops') {
             setEntityForm({ 
                 name: entity.name, 
@@ -205,7 +205,7 @@ const Configuration = () => {
                 longitude: entity.longitude || ''
             });
         } else {
-            setEntityForm({ name: entity.name, vehicle: entity.vehicle || '', phone: entity.phone || '', is_active: entity.is_active });
+            setEntityForm({ name: entity.name, vehicle: entity.vehicle || '', phone: entity.phone || '', is_active: entity.is_active, username: entity.username || '', password: entity.password || '' });
         }
     };
 
@@ -678,6 +678,31 @@ const Configuration = () => {
                                     />
                                 </div>
 
+                                {activeEntityTab !== 'shops' && (
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Usuario de Acceso Móvil</label>
+                                            <input
+                                                type="text"
+                                                value={entityForm.username || ''}
+                                                onChange={(e) => setEntityForm(prev => ({ ...prev, username: e.target.value }))}
+                                                placeholder="Ej: juan.preventa"
+                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[8px] font-black text-analyst-400 uppercase">Contraseña</label>
+                                            <input
+                                                type="text"
+                                                value={entityForm.password || ''}
+                                                onChange={(e) => setEntityForm(prev => ({ ...prev, password: e.target.value }))}
+                                                placeholder="Contraseña de ingreso"
+                                                className="w-full border-analyst-200 bg-analyst-50 rounded-lg text-xs"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
                                 <div className="flex items-center justify-between p-3 bg-analyst-50 border border-analyst-100 rounded-xl">
                                     <span className="text-[9px] font-black text-analyst-600 uppercase">Estado Activo</span>
                                     <input
@@ -734,7 +759,12 @@ const Configuration = () => {
                                 <tbody className="divide-y divide-analyst-100 text-[10px] font-bold">
                                     {activeEntityTab === 'sellers' && sellers.map(s => (
                                         <tr key={s.id} className="hover:bg-slate-50/55">
-                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">{s.name}</td>
+                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">
+                                                <p>{s.name}</p>
+                                                {s.username && (
+                                                    <p className="text-[7.5px] font-normal text-primary mt-0.5 lowercase font-mono">User: {s.username}</p>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-2 font-mono text-analyst-500">{s.phone || '-'}</td>
                                             <td className="px-4 py-2 text-center text-primary font-black">{s.commission}%</td>
                                             <td className="px-4 py-2 text-center">
@@ -780,7 +810,12 @@ const Configuration = () => {
 
                                     {activeEntityTab === 'deliverers' && deliverers.map(d => (
                                         <tr key={d.id} className="hover:bg-slate-50/55">
-                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">{d.name}</td>
+                                            <td className="px-4 py-2 uppercase text-slate-800 font-black">
+                                                <p>{d.name}</p>
+                                                {d.username && (
+                                                    <p className="text-[7.5px] font-normal text-primary mt-0.5 lowercase font-mono">User: {d.username}</p>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-2 font-mono text-analyst-500">{d.phone || '-'}</td>
                                             <td className="px-4 py-2 text-slate-600 uppercase">{d.vehicle || '-'}</td>
                                             <td className="px-4 py-2 text-center">

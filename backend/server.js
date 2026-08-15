@@ -1168,9 +1168,17 @@ app.get('/api/preventistas', async (req, res) => {
 });
 
 app.post('/api/preventistas', async (req, res) => {
-    const { name, phone, commission, is_active } = req.body;
+    const { name, phone, commission, is_active, username, password } = req.body;
     const companyId = req.headers['x-company-id'];
-    const { data, error } = await supabase.from('preventistas').insert([{ name, phone, commission: parseFloat(commission) || 0, is_active: is_active !== false, company_id: companyId }]).select();
+    const { data, error } = await supabase.from('preventistas').insert([{ 
+        name, 
+        phone, 
+        commission: parseFloat(commission) || 0, 
+        is_active: is_active !== false, 
+        company_id: companyId,
+        username: username || null,
+        password: password || null
+    }]).select();
     if (error) return res.status(500).json(error);
     res.json(data[0]);
 });
@@ -1234,9 +1242,17 @@ app.get('/api/entregadores', async (req, res) => {
 });
 
 app.post('/api/entregadores', async (req, res) => {
-    const { name, vehicle, phone, is_active } = req.body;
+    const { name, vehicle, phone, is_active, username, password } = req.body;
     const companyId = req.headers['x-company-id'];
-    const { data, error } = await supabase.from('entregadores').insert([{ name, vehicle, phone, is_active: is_active !== false, company_id: companyId }]).select();
+    const { data, error } = await supabase.from('entregadores').insert([{ 
+        name, 
+        vehicle, 
+        phone, 
+        is_active: is_active !== false, 
+        company_id: companyId,
+        username: username || null,
+        password: password || null
+    }]).select();
     if (error) return res.status(500).json(error);
     res.json(data[0]);
 });
@@ -1517,6 +1533,112 @@ app.post('/api/stock/adjustment', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// ENDPOINTS PARA LA APLICACIÓN MÓVIL
+// ==========================================
+
+// Login Móvil (Preventistas y Entregadores)
+app.post('/api/mobile/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
+        }
+
+        // Buscar en preventistas
+        const { data: prev } = await supabase.from('preventistas')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (prev) {
+            return res.json({
+                role: 'preventista',
+                user: {
+                    id: prev.id,
+                    name: prev.name,
+                    phone: prev.phone,
+                    commission: prev.commission
+                },
+                company_id: prev.company_id
+            });
+        }
+
+        // Buscar en entregadores
+        const { data: entr } = await supabase.from('entregadores')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (entr) {
+            return res.json({
+                role: 'entregador',
+                user: {
+                    id: entr.id,
+                    name: entr.name,
+                    phone: entr.phone,
+                    vehicle: entr.vehicle
+                },
+                company_id: entr.company_id
+            });
+        }
+
+        return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+    } catch (err) {
+        console.error('Error in mobile login:', err);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// Pedidos filtrados para Móvil (por preventista o entregador)
+app.get('/api/mobile/orders', async (req, res) => {
+    const companyId = req.headers['x-company-id'];
+    const userId = req.headers['x-user-id'];
+    const userRole = req.headers['x-user-role'];
+
+    try {
+        if (!companyId || !userId || !userRole) {
+            return res.status(400).json({ error: 'Faltan cabeceras de identificación (company-id, user-id, user-role).' });
+        }
+
+        let query = supabase.from('orders')
+            .select(`
+                *,
+                preventistas(*),
+                negocios(*),
+                entregadores(*),
+                order_items(
+                    *,
+                    product_variants(
+                        *,
+                        products(*)
+                    )
+                )
+            `)
+            .eq('company_id', companyId);
+
+        if (userRole === 'preventista') {
+            query = query.eq('seller_id', userId);
+        } else if (userRole === 'entregador') {
+            query = query.eq('deliverer_id', userId);
+        } else {
+            return res.status(400).json({ error: 'Rol móvil no válido.' });
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        console.error('Error fetching mobile orders:', err);
+        res.status(500).json({ error: 'Error al obtener los pedidos.' });
     }
 });
 

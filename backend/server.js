@@ -378,6 +378,67 @@ app.post('/api/unit-values', async (req, res) => {
     res.json(data[0]);
 });
 
+// Delete endpoints for catalog metadata
+app.delete('/api/families/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('families').delete().eq('id', id);
+    if (error) {
+        if (error.code === '23503') {
+            return res.status(400).json({ message: 'No se puede eliminar la familia porque tiene productos o grupos asociados.' });
+        }
+        return res.status(500).json(error);
+    }
+    res.json({ success: true });
+});
+
+app.delete('/api/groups/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('groups').delete().eq('id', id);
+    if (error) {
+        if (error.code === '23503') {
+            return res.status(400).json({ message: 'No se puede eliminar el grupo porque tiene productos asociados.' });
+        }
+        return res.status(500).json(error);
+    }
+    res.json({ success: true });
+});
+
+app.delete('/api/providers/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('providers').delete().eq('id', id);
+    if (error) {
+        if (error.code === '23503') {
+            return res.status(400).json({ message: 'No se puede eliminar el proveedor porque tiene productos asociados.' });
+        }
+        return res.status(500).json(error);
+    }
+    res.json({ success: true });
+});
+
+app.delete('/api/units/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('units').delete().eq('id', id);
+    if (error) {
+        if (error.code === '23503') {
+            return res.status(400).json({ message: 'No se puede eliminar la unidad porque tiene valores de unidad o productos asociados.' });
+        }
+        return res.status(500).json(error);
+    }
+    res.json({ success: true });
+});
+
+app.delete('/api/unit-values/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('unit_values').delete().eq('id', id);
+    if (error) {
+        if (error.code === '23503') {
+            return res.status(400).json({ message: 'No se puede eliminar este valor de unidad porque tiene variantes de producto asociadas.' });
+        }
+        return res.status(500).json(error);
+    }
+    res.json({ success: true });
+});
+
 // Products & Variants
 app.get('/api/products', async (req, res) => {
     const companyId = req.headers['x-company-id'];

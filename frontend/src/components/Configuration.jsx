@@ -162,6 +162,21 @@ const Configuration = () => {
         finally { setLoading(prev => ({ ...prev, [type]: false })); }
     };
 
+    const deleteItem = async (type, id) => {
+        if (!window.confirm("¿Estás seguro de eliminar este elemento?")) return;
+        setLoading(prev => ({ ...prev, [type]: true }));
+        try {
+            await axios.delete(`${API_URL}/${type}/${id}`);
+            await fetchData();
+        } catch (err) {
+            console.error(err);
+            const errorMsg = err.response?.data?.message || err.response?.data?.details || err.message;
+            alert("Error al eliminar: " + errorMsg);
+        } finally {
+            setLoading(prev => ({ ...prev, [type]: false }));
+        }
+    };
+
     const updateFamily = async (id, payload) => {
         try {
             await axios.patch(`${API_URL}/families/${id}`, payload);
@@ -455,6 +470,9 @@ const Configuration = () => {
                                             onBlur={(e) => updateFamily(f.id, { color: e.target.value })}
                                             className="w-6 h-6 p-0 border-0 bg-transparent cursor-pointer"
                                         />
+                                        <button onClick={() => deleteItem('families', f.id)} className="p-1 text-red-500 hover:bg-red-50 rounded-lg ml-1 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -475,9 +493,14 @@ const Configuration = () => {
                             }
                         >
                             {groups.filter(g => !selectedFamily || g.family_id == selectedFamily).map(g => (
-                                <div key={g.id} className="mx-2 my-1 px-4 py-3 bg-white border border-analyst-50 rounded-xl text-[10px] font-bold text-analyst-600 uppercase hover:border-primary/20 transition-all shadow-sm flex justify-between">
+                                <div key={g.id} className="mx-2 my-1 px-4 py-3 bg-white border border-analyst-50 rounded-xl text-[10px] font-bold text-analyst-600 uppercase hover:border-primary/20 transition-all shadow-sm flex justify-between items-center">
                                     <span>{g.name}</span>
-                                    {!selectedFamily && <span className="text-[8px] opacity-50">{families.find(f => f.id === g.family_id)?.name}</span>}
+                                    <div className="flex items-center gap-2">
+                                        {!selectedFamily && <span className="text-[8px] opacity-50 mr-1">{families.find(f => f.id === g.family_id)?.name}</span>}
+                                        <button onClick={() => deleteItem('groups', g.id)} className="p-1 text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </ConfigCard>
@@ -491,8 +514,11 @@ const Configuration = () => {
                             onAdd={() => addItem('providers', { name: newName.provider })}
                         >
                             {providers.map(p => (
-                                <div key={p.id} className="mx-2 my-1 px-4 py-3 bg-white border border-analyst-50 rounded-xl text-[10px] font-bold text-analyst-600 uppercase hover:border-primary/20 transition-all shadow-sm">
-                                    {p.name}
+                                <div key={p.id} className="mx-2 my-1 px-4 py-3 bg-white border border-analyst-50 rounded-xl text-[10px] font-bold text-analyst-600 uppercase hover:border-primary/20 transition-all shadow-sm flex justify-between items-center">
+                                    <span>{p.name}</span>
+                                    <button onClick={() => deleteItem('providers', p.id)} className="p-1 text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                                    </button>
                                 </div>
                             ))}
                         </ConfigCard>
@@ -520,14 +546,20 @@ const Configuration = () => {
                             <div className="p-2 space-y-4">
                                 {units.map(u => (
                                     <div key={u.id} className="p-4 bg-analyst-50/50 rounded-2xl border border-analyst-100">
-                                        <p className="text-[10px] font-black text-analyst-900 uppercase mb-2 tracking-widest leading-none flex items-center gap-2">
-                                            <span className="w-1 h-3 bg-primary rounded-full"></span>
-                                            {u.name}
-                                        </p>
+                                        <div className="text-[10px] font-black text-analyst-900 uppercase mb-2 tracking-widest leading-none flex items-center justify-between">
+                                            <span className="flex items-center gap-2">
+                                                <span className="w-1 h-3 bg-primary rounded-full"></span>
+                                                {u.name}
+                                            </span>
+                                            <button onClick={() => deleteItem('units', u.id)} className="p-1 text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-[12px]">delete</span>
+                                            </button>
+                                        </div>
                                         <div className="flex flex-wrap gap-1.5">
                                             {u.unit_values?.map(val => (
-                                                <span key={val.id} className="text-[9px] font-black px-2 py-1 bg-white border border-analyst-100 rounded-lg text-analyst-500 shadow-sm">
+                                                <span key={val.id} className="text-[9px] font-black px-2 py-1 bg-white border border-analyst-100 rounded-lg text-analyst-500 shadow-sm flex items-center gap-1">
                                                     {val.value}
+                                                    <button onClick={() => deleteItem('unit-values', val.id)} className="text-red-400 hover:text-red-600 font-bold ml-1 text-[8px] leading-none">×</button>
                                                 </span>
                                             ))}
                                         </div>

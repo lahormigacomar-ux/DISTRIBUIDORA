@@ -463,9 +463,28 @@ app.patch('/api/products/:id', async (req, res) => {
 
 app.delete('/api/products/:id', async (req, res) => {
     const { id } = req.params;
+    // First try to physically delete (works if the product has never been ordered)
     const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) return res.status(500).json(error);
-    res.json({ success: true });
+    
+    if (error) {
+        // Postgres error code 23503 is foreign_key_violation
+        if (error.code === '23503') {
+            console.log(`Product ${id} has active orders. Soft-deleting instead.`);
+            
+            // Soft delete product metadata
+            const { error: pError } = await supabase.from('products').update({ is_active: false }).eq('id', id);
+            if (pError) return res.status(500).json(pError);
+            
+            // Soft delete all variants of this product
+            const { error: vError } = await supabase.from('product_variants').update({ is_active: false }).eq('product_id', id);
+            if (vError) return res.status(500).json(vError);
+            
+            return res.json({ success: true, softDeleted: true });
+        }
+        console.error('DELETE Product Error:', error);
+        return res.status(500).json(error);
+    }
+    res.json({ success: true, physicallyDeleted: true });
 });
 
 // Image Upload

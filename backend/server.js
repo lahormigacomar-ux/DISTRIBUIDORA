@@ -392,6 +392,7 @@ app.get('/api/products', async (req, res) => {
                 product_variants(*)
             `)
             .eq('company_id', companyId)
+            .neq('is_active', false)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -408,8 +409,9 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/variants', async (req, res) => {
     const companyId = req.headers['x-company-id'];
     const { data, error } = await supabase.from('product_variants')
-        .select('*, products(*, families(name), groups(name), providers(name))')
+        .select('*, products!inner(*, families(name), groups(name), providers(name))')
         .eq('company_id', companyId)
+        .neq('products.is_active', false)
         .order('created_at', { ascending: false });
     if (error) return res.status(500).json(error);
     res.json(data);

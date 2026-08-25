@@ -292,7 +292,7 @@ const CatalogEditor = () => {
                 const format = p.pdf_format || '1';
                 const varsCount = (p.product_variants || []).filter(v => v.is_active !== false).length || 1;
                 let height = 0;
-                if (format === '1') height = 180 + (varsCount * 12);
+                if (format === '1') height = Math.max(65, 20 + (varsCount * (p.show_long_description && p.long_description ? 22 : 12)));
                 else if (format === '2') height = Math.max(130, 80 + (varsCount * 12));
                 else if (format === '3') height = 260;
                 else if (format === '5') height = 200;
@@ -308,7 +308,7 @@ const CatalogEditor = () => {
                     maxH = 0;
                 }
 
-                if (format === '1' || format === '6') {
+                if (format === '6') {
                     const colW = 165;
                     currentPageItems.push({ product: p, x: xPos, y: yPos, width: colW, height });
                     maxH = Math.max(maxH, height);
@@ -341,7 +341,7 @@ const CatalogEditor = () => {
                     const format = p.pdf_format || '1';
                     const varsCount = (p.product_variants || []).filter(v => v.is_active !== false).length || 1;
                     let height = 0;
-                    if (format === '1') height = 180 + (varsCount * 12);
+                    if (format === '1') height = Math.max(65, 20 + (varsCount * (p.show_long_description && p.long_description ? 22 : 12)));
                     else if (format === '2') height = Math.max(130, 80 + (varsCount * 12));
                     else if (format === '3') height = 260;
                     else if (format === '5') height = 200;
@@ -357,7 +357,7 @@ const CatalogEditor = () => {
                         maxH = 0;
                     }
 
-                    if (format === '1' || format === '6') {
+                    if (format === '6') {
                         const colW = 165;
                         currentPageItems.push({ product: p, x: xPos, y: yPos, width: colW, height });
                         maxH = Math.max(maxH, height);
@@ -399,40 +399,44 @@ const CatalogEditor = () => {
     const ProductFormat1 = ({ product }) => {
         const familyColor = settings.primaryColor;
         return (
-            <div className="bg-white rounded-2xl border border-analyst-100 shadow-sm relative overflow-hidden flex flex-col items-center">
-                <div className="w-full aspect-square bg-slate-50 flex items-center justify-center relative overflow-hidden">
+            <div className="bg-white p-2.5 rounded-xl border border-analyst-100 shadow-sm relative overflow-hidden flex gap-4 w-full min-h-[65px] items-center">
+                {/* 1. Image on the left */}
+                <div className="w-12 h-12 rounded-lg bg-slate-50 overflow-hidden border border-analyst-100 flex items-center justify-center shrink-0">
                     {product.image_url ? (
                         <img src={product.image_url} className="w-full h-full object-cover" alt={product.name} />
                     ) : (
-                        <span className="material-symbols-outlined text-4xl text-analyst-200">image</span>
+                        <span className="material-symbols-outlined text-2xl text-analyst-200">image</span>
                     )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-[2px] py-1 text-center">
-                        <p className="text-[7.5px] font-black uppercase text-white truncate px-2">{product.name}</p>
-                    </div>
                 </div>
 
-                <div className="w-full">
-                    <table className="w-full text-center border-collapse">
+                {/* 2. Unified Table on the right */}
+                <div className="flex-1 border border-analyst-100 rounded-lg overflow-hidden">
+                    <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-analyst-900 text-white text-[5.5px] font-black uppercase">
-                                <th className="py-1 w-6">COD</th>
-                                <th className="py-1">VARIANTE</th>
+                            <tr className="bg-slate-200 text-slate-700 text-[6px] font-black uppercase">
+                                <th className="py-1 px-1.5 w-14">COD</th>
+                                <th className="py-1 px-1.5">PRODUCTO / VARIANTE</th>
                                 {Object.keys(priceLabels).map(key => {
                                     if (key === 'base_price') return null;
                                     if (settings[`show_${key}`] === false) return null;
-                                    return <th key={key} className="py-1 w-10">{priceLabels[key]}</th>;
+                                    return <th key={key} className="py-1 px-1.5 text-center w-14">{priceLabels[key]}</th>;
                                 })}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-analyst-100">
                             {(product.product_variants || []).filter(v => v.is_active !== false).map((v, i) => (
-                                <tr key={v.id} className={`text-[6px] ${i % 2 === 0 ? 'bg-white' : 'bg-analyst-50'}`}>
-                                    <td className="py-1 font-mono font-black text-analyst-400">{v.code || '-'}</td>
-                                    <td className="py-1 font-bold text-analyst-600 truncate max-w-[50px] uppercase">{v.name}</td>
+                                <tr key={v.id} className={`text-[6.5px] ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/55'}`}>
+                                    <td className="py-0.5 px-1.5 font-mono font-bold text-slate-500">{v.code || '-'}</td>
+                                    <td className="py-0.5 px-1.5 font-bold text-slate-700 uppercase">
+                                        <div>{product.name} - {v.name}</div>
+                                        {product.show_long_description && product.long_description && (
+                                            <div className="text-[5.5px] text-slate-400 font-medium normal-case mt-0.5">{product.long_description}</div>
+                                        )}
+                                    </td>
                                     {Object.keys(priceLabels).map(key => {
                                         if (key === 'base_price') return null;
                                         if (settings[`show_${key}`] === false) return null;
-                                        return <td key={key} className="py-1 font-black" style={{ color: familyColor }}>${(v[key] || 0).toFixed(1)}</td>;
+                                        return <td key={key} className="py-0.5 px-1.5 font-black text-center" style={{ color: familyColor }}>${(v[key] || 0).toFixed(1)}</td>;
                                     })}
                                 </tr>
                             ))}

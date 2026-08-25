@@ -17,9 +17,15 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Detect frontend path early for static files check
+let frontendPath = path.resolve(__dirname, '..', 'frontend', 'dist');
+if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.join(__dirname, 'dist');
+}
+
 // Middleware to handle Vercel routing where '/api' might be stripped
 app.use((req, res, next) => {
-    if (!req.url.startsWith('/api')) {
+    if (!req.url.startsWith('/api') && !fs.existsSync(frontendPath)) {
         req.url = '/api' + req.url;
     }
     next();
@@ -482,6 +488,15 @@ app.post('/api/products', async (req, res) => {
     const { product, variants } = req.body;
     const companyId = req.headers['x-company-id'];
     
+    // Extract stock from product object as it belongs to the product_variants table
+    const stock = Number(product.stock) || 0;
+    if (product) {
+        delete product.stock;
+        if (product.family_id === '') product.family_id = null;
+        if (product.group_id === '') product.group_id = null;
+        if (product.provider_id === '') product.provider_id = null;
+    }
+    
     const productWithCompany = { ...product, company_id: companyId };
     const { data: pData, error: pError } = await supabase.from('products').insert([productWithCompany]).select();
     if (pError) return res.status(500).json(pError);
@@ -492,6 +507,21 @@ app.post('/api/products', async (req, res) => {
         const variantsWithId = variants.map(v => ({ ...v, product_id: productId, company_id: companyId }));
         const { error: vError } = await supabase.from('product_variants').insert(variantsWithId);
         if (vError) return res.status(500).json(vError);
+    } else {
+        // If no variants are provided, create a default unique variant with the initial stock
+        const defaultVariant = {
+            product_id: productId,
+            company_id: companyId,
+            name: "Única",
+            stock: stock,
+            base_price: 0,
+            price_unit: 0,
+            price_bulk: 0,
+            price_business: 0,
+            price_company: 0
+        };
+        const { error: vError } = await supabase.from('product_variants').insert([defaultVariant]);
+        if (vError) return res.status(500).json(vError);
     }
 
     res.json(pData[0]);
@@ -501,6 +531,14 @@ app.patch('/api/products/:id', async (req, res) => {
     const { id } = req.params;
     const { product, variants } = req.body;
     const companyId = req.headers['x-company-id'];
+
+    // Clean stock and empty string UUIDs from product metadata object
+    if (product) {
+        delete product.stock;
+        if (product.family_id === '') product.family_id = null;
+        if (product.group_id === '') product.group_id = null;
+        if (product.provider_id === '') product.provider_id = null;
+    }
 
     // 1. Update Product Metadata
     const { error: pError } = await supabase.from('products').update(product).eq('id', id);
@@ -771,57 +809,74 @@ app.post('/api/catalog/pdf', async (req, res) => {
 
         const drawFormat1 = (p, x, y, width, familyColor, enabledPriceKeys, priceLabels) => {
             const color = familyColor || COLORS.cyan;
-            const imgSize = 160;
+            const imgSize = 50;
             const img = imageBufferMap[p.image_url];
 
-            // Image Container
+            // Calculate height of this row block first to center image vertically
+            const tableHeight = 12 + (p.variants.length * (p.show_long_description && p.long_description ? 22 : 12));
+            const maxRowHeight = Math.max(65, tableHeight + 15);
+
+            // Centered Image Y position
+            const imgY = y + (maxRowHeight - imgSize) / 2;
+
+            // 1. Draw Image (on the left, centered vertically)
             if (img) {
-                doc.image(img, x, y, { fit: [imgSize, imgSize] });
+                doc.image(img, x, imgY, { fit: [imgSize, imgSize] });
             } else {
-                doc.rect(x, y, imgSize, imgSize).fill('#f1f5f9');
+                doc.rect(x, imgY, imgSize, imgSize).fill('#f1f5f9');
             }
 
-            // Title Overlay (Centered over image)
-            doc.rect(x, y + (imgSize / 2) - 10, imgSize, 20).fillOpacity(0.4).fill('#000000').fillOpacity(1);
-            doc.fillColor('#ffffff').fontSize(8).font('Helvetica-Bold').text(p.name.toUpperCase(), x, y + (imgSize / 2) - 4, { width: imgSize, align: 'center' });
-
-            let curY = y + imgSize + 5;
-
-            // Calculate column widths
-            const totalWidth = imgSize;
-            const codW = 25;
+            // 2. Table on the right
+            const tableX = x + imgSize + 15;
+            const tableWidth = width - (imgSize + 15); // 515 - 65 = 450
+            
+            const codW = 50;
             const priceCount = enabledPriceKeys.length;
-            const priceAreaW = Math.min(80, priceCount * 30);
+            const priceAreaW = 150;
             const priceW = Math.floor(priceAreaW / priceCount);
-            const nameW = totalWidth - codW - (priceW * priceCount);
+            const nameW = tableWidth - codW - (priceW * priceCount); // 450 - 50 - 150 = 250
 
-            // Table Header
-            doc.rect(x, curY, totalWidth, 12).fill(COLORS.dark);
-            doc.fillColor('#ffffff').fontSize(5.5).font('Helvetica-Bold');
-            doc.text('COD', x, curY + 3, { width: codW, align: 'center' });
-            doc.text('NOMBRE', x + codW, curY + 3, { width: nameW, align: 'center' });
+            // Table Header (light-medium gray background and dark slate text)
+            doc.rect(tableX, y + 5, tableWidth, 12).fill('#cbd5e1');
+            doc.fillColor('#334155').fontSize(6).font('Helvetica-Bold');
+            doc.text('COD', tableX + 5, y + 8, { width: codW - 5, align: 'left' });
+            doc.text('PRODUCTO / VARIANTE', tableX + codW, y + 8, { width: nameW, align: 'left' });
             
             enabledPriceKeys.forEach((key, idx) => {
                 const label = priceLabels[key] || 'Precio';
-                doc.text(label.toUpperCase(), x + codW + nameW + (idx * priceW), curY + 3, { width: priceW, align: 'center' });
+                doc.text(label.toUpperCase(), tableX + codW + nameW + (idx * priceW), y + 8, { width: priceW, align: 'center' });
             });
 
-            curY += 12;
+            let curY = y + 17;
             p.variants.forEach(v => {
-                doc.fillColor(COLORS.text).fontSize(5.5).font('Helvetica').text(v.code || '-', x, curY + 3, { width: codW, align: 'center' });
-                doc.text(v.name.toUpperCase(), x + codW, curY + 3, { width: nameW, align: 'center' });
+                // Calculate if we need extra height for long description
+                const showDesc = p.show_long_description && p.long_description;
+                const rowHeight = showDesc ? 22 : 12;
+
+                doc.fillColor(COLORS.text).fontSize(6).font('Helvetica').text(v.code || '-', tableX + 5, curY + 3, { width: codW - 5, align: 'left' });
+                
+                // Combine product name and variant name
+                const displayName = `${p.name.toUpperCase()} - ${v.name.toUpperCase()}`;
+                doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(6).text(displayName, tableX + codW, curY + 3, { width: nameW, align: 'left' });
+                
+                if (showDesc) {
+                    doc.fillColor('#64748b').font('Helvetica').fontSize(5).text(p.long_description, tableX + codW, curY + 11, { width: nameW, height: 10, ellipsis: true });
+                }
                 
                 enabledPriceKeys.forEach((key, idx) => {
                     const priceVal = v[key] || 0;
-                    doc.fillColor(color).font('Helvetica-Bold').text(`${priceVal.toFixed(2)}`, x + codW + nameW + (idx * priceW), curY + 3, { width: priceW, align: 'center' });
+                    doc.fillColor(color).font('Helvetica-Bold').fontSize(6).text(`${priceVal.toFixed(2)}`, tableX + codW + nameW + (idx * priceW), curY + 3, { width: priceW, align: 'center' });
                 });
 
-                // Visible lines
-                doc.rect(x, curY, totalWidth, 12).lineWidth(0.2).strokeColor('#e2e8f0').stroke();
-                curY += 12;
+                // Underline
+                doc.moveTo(tableX, curY + rowHeight - 1).lineTo(tableX + tableWidth, curY + rowHeight - 1).lineWidth(0.2).strokeColor('#e2e8f0').stroke();
+                curY += rowHeight;
             });
 
-            return curY - y + 10;
+            // Draw a separator line at the very bottom of the product row
+            doc.moveTo(x, y + maxRowHeight - 2).lineTo(x + width, y + maxRowHeight - 2).lineWidth(0.5).strokeColor('#cbd5e1').stroke();
+
+            return maxRowHeight;
         };
 
         const drawFormat2 = (p, x, y, width, familyColor, enabledPriceKeys, priceLabels) => {
@@ -1183,9 +1238,11 @@ app.post('/api/catalog/pdf', async (req, res) => {
             for (const p of f.products) {
                 const format = p.pdf_format || '1';
                 let height = 0;
-                if (format === '1') height = 180 + (p.variants.length * 12);
+                if (format === '1') height = Math.max(65, 20 + (p.variants.length * (p.show_long_description && p.long_description ? 22 : 12)));
                 else if (format === '2') height = Math.max(130, 80 + (p.variants.length * 12));
                 else if (format === '3') height = 260; // Slightly reduced
+                else if (format === '5') height = 200;
+                else if (format === '6') height = 180 + (p.variants.length * 12);
                 else height = 280 + (p.variants.length * 15); // Format 4 updated scale
 
                 if (yPos + height > 780) { 
@@ -1196,12 +1253,16 @@ app.post('/api/catalog/pdf', async (req, res) => {
                     maxH = 0; 
                 }
 
-                if (format === '1' || format === '6') {
+                if (format === '6') {
                     const colW = 170;
-                    const h = (format === '6') ? drawFormat6(p, xPos, yPos, colW - 5, f.color, enabledPriceKeys, priceLabels) : drawFormat1(p, xPos, yPos, colW - 5, f.color, enabledPriceKeys, priceLabels);
+                    const h = drawFormat6(p, xPos, yPos, colW - 5, f.color, enabledPriceKeys, priceLabels);
                     maxH = Math.max(maxH, h);
                     xPos += colW;
                     if (xPos > 500) { xPos = MARGIN; yPos += maxH + 10; maxH = 0; }
+                } else if (format === '1') {
+                    if (xPos > MARGIN) { yPos += maxH + 10; xPos = MARGIN; }
+                    const h = drawFormat1(p, xPos, yPos, 515, f.color, enabledPriceKeys, priceLabels);
+                    yPos += h; maxH = 0;
                 } else if (format === '2') {
                     if (xPos > MARGIN) { yPos += maxH + 10; xPos = MARGIN; }
                     const h = drawFormat2(p, xPos, yPos, 515, f.color, enabledPriceKeys, priceLabels);
@@ -1778,13 +1839,7 @@ app.get('/api/mobile/orders', async (req, res) => {
 });
 
 // Serve Frontend Static Files (only if dist folder exists, i.e., in production/Electron)
-// Robust path detection for Electron / Packed environments
-let frontendPath = path.resolve(__dirname, '..', 'frontend', 'dist');
-
-// If not found in parent/frontend/dist, try relative to current dir (for some packing scenarios)
-if (!fs.existsSync(frontendPath)) {
-    frontendPath = path.join(__dirname, 'dist');
-}
+// Robust path detection was completed at the top of this file.
 
 // Logging for debug in production
 console.log('--- FRONTEND PATH DETECTION ---');

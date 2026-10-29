@@ -9,6 +9,8 @@ import CatalogEditor from './components/CatalogEditor';
 import OrderManager from './components/OrderManager';
 import StockManager from './components/StockManager';
 
+const APP_VERSION = 'v4.1.0';
+
 function App() {
     const [company, setCompany] = useState(() => {
         try {
@@ -107,7 +109,7 @@ function App() {
                             <span className="material-symbols-outlined text-3xl font-black">token</span>
                         </div>
                         <h1 className="text-xl font-black text-white uppercase tracking-tight">SISTEMA DISTRIBUIDORA</h1>
-                        <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mt-1">Portal Multi-Empresa</p>
+                        <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mt-1">Portal Multi-Empresa • {APP_VERSION}</p>
                     </header>
 
                     {/* Auth Tab Switcher */}
@@ -201,11 +203,14 @@ function App() {
                         )}
                         <h1 className="text-sm font-black tracking-tight truncate hidden lg:block uppercase">{company.name}</h1>
                     </div>
-                    <p className="text-[9px] text-analyst-400 mt-1 uppercase tracking-[0.2em] font-black hidden lg:block">Distribuidora</p>
+                    <div className="flex items-center justify-between mt-1 hidden lg:flex">
+                        <p className="text-[9px] text-analyst-400 uppercase tracking-[0.2em] font-black">Distribuidora</p>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{APP_VERSION}</span>
+                    </div>
                 </div>
 
                 <nav className="flex-1 px-3 py-6 space-y-2">
-                    <NavItem id="inventory" icon="package" label="Productos" />
+                    <NavItem id="inventory" icon="package_2" label="Productos" />
                     <NavItem id="editor" icon="edit_document" label="Editor Catálogo" />
                     <NavItem id="prices" icon="sell" label="Precios" />
                     <NavItem id="stock" icon="inventory" label="Control de Stock" />
@@ -231,6 +236,9 @@ function App() {
                         <span className="material-symbols-outlined text-sm">logout</span>
                         <span className="hidden lg:inline">Cerrar Sesión</span>
                     </button>
+                    <div className="text-center pt-1">
+                        <span className="text-[9px] font-black text-analyst-400 tracking-wider uppercase">Sistema {APP_VERSION}</span>
+                    </div>
                 </div>
             </aside>
 

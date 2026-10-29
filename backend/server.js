@@ -776,7 +776,7 @@ app.post('/api/catalog/pdf', async (req, res) => {
             doc.fillColor(COLORS.dark).fontSize(20).text(catalogConfig.headerTitle || 'CATÁLOGO DE PRODUCTOS', textStartX, MARGIN + 25);
             doc.fillColor(COLORS.dark).fontSize(10).text(catalogConfig.headerUnderlineText || 'CATÁLOGO DE PRECIOS', MARGIN, MARGIN + 25, { align: 'right', width: 515 - 10 });
             doc.rect(MARGIN, MARGIN + 60, 515, 2).fill(COLORS.cyan || '#00bcd4');
-            return 80; // Return height consumed
+            return 65; // Return height consumed
         };
 
         const drawWatermark = async () => {
@@ -1222,7 +1222,7 @@ app.post('/api/catalog/pdf', async (req, res) => {
         doc.addPage();
         await drawWatermark();
         drawFooter();
-        let yPos = MARGIN + drawGlobalHeader() + 20;
+        let yPos = MARGIN + drawGlobalHeader() + 10;
         let xPos = MARGIN;
 
         for (const f of structuredData) {
@@ -1230,7 +1230,7 @@ app.post('/api/catalog/pdf', async (req, res) => {
                 doc.addPage();
                 await drawWatermark();
                 drawFooter();
-                yPos = (catalogConfig.repeatHeader !== false) ? (MARGIN + drawGlobalHeader() + 20) : MARGIN;
+                yPos = (catalogConfig.repeatHeader !== false) ? (MARGIN + drawGlobalHeader() + 10) : MARGIN;
             }
             yPos += 10;
 
@@ -1248,7 +1248,7 @@ app.post('/api/catalog/pdf', async (req, res) => {
                 if (yPos + height > 780) { 
                     doc.addPage(); 
                     drawFooter(); 
-                    yPos = (catalogConfig.repeatHeader !== false) ? (MARGIN + drawGlobalHeader() + 20) : MARGIN; 
+                    yPos = (catalogConfig.repeatHeader !== false) ? (MARGIN + drawGlobalHeader() + 10) : MARGIN; 
                     xPos = MARGIN; 
                     maxH = 0; 
                 }

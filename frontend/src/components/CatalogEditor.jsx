@@ -273,7 +273,7 @@ const CatalogEditor = () => {
         let currentPageNum = 1;
         let currentPageItems = [];
         
-        let yPos = 140; 
+        let yPos = 115; 
         let xPos = 40;  
         let maxH = 0;
 
@@ -303,7 +303,7 @@ const CatalogEditor = () => {
                     pages.push({ pageNum: currentPageNum, items: currentPageItems });
                     currentPageNum++;
                     currentPageItems = [];
-                    yPos = (currentPageNum === 1 || settings.repeatHeader !== false) ? 140 : 40;
+                    yPos = (currentPageNum === 1 || settings.repeatHeader !== false) ? 115 : 40;
                     xPos = 40;
                     maxH = 0;
                 }
@@ -352,7 +352,7 @@ const CatalogEditor = () => {
                         pages.push({ pageNum: currentPageNum, items: currentPageItems });
                         currentPageNum++;
                         currentPageItems = [];
-                        yPos = (currentPageNum === 1 || settings.repeatHeader !== false) ? 140 : 40;
+                        yPos = (currentPageNum === 1 || settings.repeatHeader !== false) ? 115 : 40;
                         xPos = 40;
                         maxH = 0;
                     }
@@ -1219,7 +1219,7 @@ const CatalogEditor = () => {
                                     {page.items.map((item, itemIdx) => {
                                         const p = item.product;
                                         const format = p.pdf_format || '1';
-                                        const startY = (pIdx === 0 || settings.repeatHeader !== false) ? 140 : 40;
+                                        const startY = (pIdx === 0 || settings.repeatHeader !== false) ? 115 : 40;
                                         const relativeY = item.y - startY;
 
                                         return (

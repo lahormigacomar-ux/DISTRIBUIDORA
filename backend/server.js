@@ -1780,6 +1780,51 @@ app.get('/api/portal/my-orders', async (req, res) => {
     }
 });
 
+// Portal Clientes - Eliminar / Cancelar Pedido
+app.delete('/api/portal/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    const companyId = req.headers['x-company-id'];
+    const shopId = req.query.shop_id;
+
+    try {
+        // Verificar que el pedido pertenezca a la empresa y al negocio
+        let verifyQuery = supabase.from('orders').select('*').eq('id', id);
+        if (companyId) verifyQuery = verifyQuery.eq('company_id', companyId);
+        if (shopId) verifyQuery = verifyQuery.eq('shop_id', shopId);
+
+        const { data: order, error: verifyErr } = await verifyQuery.maybeSingle();
+        if (verifyErr || !order) {
+            return res.status(404).json({ error: 'Pedido no encontrado o no pertenece a su cuenta.' });
+        }
+
+        // Eliminar items primero
+        await supabase.from('order_items').delete().eq('order_id', id);
+
+        // Eliminar orden
+        const { error: delErr } = await supabase.from('orders').delete().eq('id', id);
+        if (delErr) throw delErr;
+
+        // Limpiar de orders_metadata si existe
+        if (companyId) {
+            const { data: metaSetting } = await supabase.from('settings')
+                .select('value')
+                .eq('key', 'orders_metadata')
+                .eq('company_id', companyId)
+                .maybeSingle();
+            if (metaSetting?.value && metaSetting.value[id]) {
+                const updatedMeta = { ...metaSetting.value };
+                delete updatedMeta[id];
+                await supabase.from('settings').update({ value: updatedMeta }).eq('key', 'orders_metadata').eq('company_id', companyId);
+            }
+        }
+
+        res.json({ success: true, message: 'Pedido eliminado correctamente.' });
+    } catch (err) {
+        console.error('Portal delete order error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Entregadores CRUD
 app.get('/api/entregadores', async (req, res) => {
     const companyId = req.headers['x-company-id'];

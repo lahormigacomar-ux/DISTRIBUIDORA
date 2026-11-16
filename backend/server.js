@@ -1348,8 +1348,33 @@ app.get('/api/negocios', async (req, res) => {
     res.json(data);
 });
 
+// Negocios (Clientes) Endpoints
+app.get('/api/negocios', async (req, res) => {
+    const companyId = req.headers['x-company-id'];
+    const { data, error } = await supabase.from('negocios').select('*').eq('company_id', companyId).order('name');
+    if (error) return res.status(500).json(error);
+
+    // Merge credentials from settings
+    try {
+        const { data: credSettings } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'client_credentials')
+            .eq('company_id', companyId)
+            .single();
+        const credMap = credSettings?.value || {};
+        const enriched = (data || []).map(neg => ({
+            ...neg,
+            portal_user: credMap[neg.id]?.user || '',
+            portal_password: credMap[neg.id]?.pass || ''
+        }));
+        return res.json(enriched);
+    } catch (e) {
+        return res.json(data);
+    }
+});
+
 app.post('/api/negocios', async (req, res) => {
-    const { name, owner, address, phone, cuit, is_active, latitude, longitude, price_list, visiting_days } = req.body;
+    const { name, owner, address, phone, cuit, is_active, latitude, longitude, price_list, visiting_days, portal_user, portal_password } = req.body;
     const companyId = req.headers['x-company-id'];
     const { data, error } = await supabase.from('negocios').insert([{
         name, owner, address, phone, cuit, 
@@ -1361,21 +1386,313 @@ app.post('/api/negocios', async (req, res) => {
         visiting_days: visiting_days || []
     }]).select();
     if (error) return res.status(500).json(error);
-    res.json(data[0]);
+
+    const created = data[0];
+    if (portal_user || portal_password) {
+        try {
+            const { data: credSettings } = await supabase.from('settings')
+                .select('value')
+                .eq('key', 'client_credentials')
+                .eq('company_id', companyId)
+                .single();
+            const credMap = credSettings?.value || {};
+            credMap[created.id] = { user: (portal_user || '').trim().toLowerCase(), pass: portal_password || '' };
+            await supabase.from('settings').upsert({
+                key: 'client_credentials',
+                company_id: companyId,
+                value: credMap
+            });
+            created.portal_user = portal_user;
+            created.portal_password = portal_password;
+        } catch (e) {
+            console.error('Error saving client credentials:', e);
+        }
+    }
+
+    res.json(created);
 });
 
 app.patch('/api/negocios/:id', async (req, res) => {
     const { id } = req.params;
-    const { data, error } = await supabase.from('negocios').update(req.body).eq('id', id).select();
-    if (error) return res.status(500).json(error);
-    res.json(data[0]);
+    const companyId = req.headers['x-company-id'];
+    const { portal_user, portal_password, ...dbFields } = req.body;
+
+    let updated = null;
+    if (Object.keys(dbFields).length > 0) {
+        const { data, error } = await supabase.from('negocios').update(dbFields).eq('id', id).select();
+        if (error) return res.status(500).json(error);
+        updated = data[0];
+    } else {
+        const { data } = await supabase.from('negocios').select('*').eq('id', id).single();
+        updated = data;
+    }
+
+    if (portal_user !== undefined || portal_password !== undefined) {
+        try {
+            const { data: credSettings } = await supabase.from('settings')
+                .select('value')
+                .eq('key', 'client_credentials')
+                .eq('company_id', companyId || updated.company_id)
+                .single();
+            const credMap = credSettings?.value || {};
+            credMap[id] = {
+                user: portal_user !== undefined ? portal_user.trim().toLowerCase() : (credMap[id]?.user || ''),
+                pass: portal_password !== undefined ? portal_password : (credMap[id]?.pass || '')
+            };
+            await supabase.from('settings').upsert({
+                key: 'client_credentials',
+                company_id: companyId || updated.company_id,
+                value: credMap
+            });
+            if (updated) {
+                updated.portal_user = credMap[id].user;
+                updated.portal_password = credMap[id].pass;
+            }
+        } catch (e) {
+            console.error('Error updating client credentials:', e);
+        }
+    }
+
+    res.json(updated);
 });
 
 app.delete('/api/negocios/:id', async (req, res) => {
     const { id } = req.params;
+    const companyId = req.headers['x-company-id'];
     const { error } = await supabase.from('negocios').delete().eq('id', id);
     if (error) return res.status(500).json(error);
+
+    try {
+        const { data: credSettings } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'client_credentials')
+            .eq('company_id', companyId)
+            .single();
+        if (credSettings?.value && credSettings.value[id]) {
+            delete credSettings.value[id];
+            await supabase.from('settings').upsert({
+                key: 'client_credentials',
+                company_id: companyId,
+                value: credSettings.value
+            });
+        }
+    } catch (e) { }
+
     res.json({ success: true });
+});
+
+// Portal Clientes - Autenticación y Datos
+app.post('/api/portal/login', async (req, res) => {
+    const { user, password, companyCode } = req.body;
+    try {
+        let companyId = null;
+        let companyData = null;
+
+        if (companyCode) {
+            const { data: comp } = await supabase.from('companies').select('*').eq('code', companyCode).single();
+            if (comp) {
+                companyId = comp.id;
+                companyData = comp;
+            }
+        }
+
+        if (!companyId) {
+            const { data: comps } = await supabase.from('companies').select('*').limit(1);
+            if (comps && comps[0]) {
+                companyId = comps[0].id;
+                companyData = comps[0];
+            }
+        }
+
+        if (!companyId) return res.status(404).json({ error: 'Empresa no encontrada' });
+
+        const { data: credSettings } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'client_credentials')
+            .eq('company_id', companyId)
+            .single();
+        const credMap = credSettings?.value || {};
+
+        const cleanUser = (user || '').trim().toLowerCase();
+        const cleanPass = (password || '').trim();
+
+        let matchedShopId = null;
+        for (const [shopId, creds] of Object.entries(credMap)) {
+            if ((creds.user || '').toLowerCase() === cleanUser && creds.pass === cleanPass) {
+                matchedShopId = shopId;
+                break;
+            }
+        }
+
+        if (!matchedShopId) {
+            return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+        }
+
+        const { data: shop, error: sErr } = await supabase.from('negocios').select('*').eq('id', matchedShopId).single();
+        if (sErr || !shop) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+
+        if (shop.is_active === false) {
+            return res.status(403).json({ error: 'Tu cuenta se encuentra pausada. Comunicate con la distribuidora.' });
+        }
+
+        // Fetch price label name
+        const { data: priceSettings } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'price_labels')
+            .eq('company_id', companyId)
+            .single();
+        const priceLabels = priceSettings?.value || {};
+
+        res.json({
+            client: {
+                id: shop.id,
+                name: shop.name,
+                owner: shop.owner,
+                address: shop.address,
+                phone: shop.phone,
+                cuit: shop.cuit,
+                price_list: shop.price_list || 'price_unit',
+                price_list_name: priceLabels[shop.price_list || 'price_unit'] || 'General'
+            },
+            company: {
+                id: companyData.id,
+                name: companyData.name,
+                code: companyData.code,
+                phone: companyData.phone,
+                logo_url: companyData.logo_url
+            }
+        });
+    } catch (err) {
+        console.error('Portal login error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Portal Clientes - Obtener catálogo para el cliente con SU precio
+app.get('/api/portal/catalog', async (req, res) => {
+    const companyId = req.headers['x-company-id'];
+    const priceList = req.query.price_list || 'price_unit';
+
+    try {
+        const { data: products, error: pErr } = await supabase
+            .from('products')
+            .select(`
+                *,
+                families(*),
+                groups(*),
+                product_variants(*)
+            `)
+            .eq('company_id', companyId)
+            .neq('is_active', false)
+            .order('name');
+
+        if (pErr) throw pErr;
+
+        // Fetch price labels
+        const { data: priceSettings } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'price_labels')
+            .eq('company_id', companyId)
+            .single();
+        const priceLabels = priceSettings?.value || {};
+
+        // Fetch delivery schedule
+        const { data: schedSettings } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'delivery_schedule')
+            .eq('company_id', companyId)
+            .single();
+        const deliverySchedule = schedSettings?.value || {
+            whatsapp_number: '',
+            rules: []
+        };
+
+        // Format products with only the assigned client price
+        const formatted = (products || []).map(p => {
+            const activeVars = (p.product_variants || []).filter(v => v.is_active !== false).map(v => {
+                const assignedPrice = v[priceList] !== undefined && v[priceList] !== null ? Number(v[priceList]) : Number(v.base_price || 0);
+                return {
+                    id: v.id,
+                    code: v.code,
+                    name: v.name,
+                    stock: v.stock,
+                    price: assignedPrice
+                };
+            });
+            return {
+                id: p.id,
+                name: p.name,
+                description: p.long_description || p.description,
+                image_url: p.image_url,
+                family: p.families?.name || 'General',
+                family_id: p.family_id,
+                group: p.groups?.name || '',
+                is_offer: p.is_offer,
+                variants: activeVars
+            };
+        }).filter(p => p.variants.length > 0);
+
+        res.json({
+            products: formatted,
+            price_list: priceList,
+            price_list_name: priceLabels[priceList] || 'Lista Estándar',
+            delivery_schedule: deliverySchedule
+        });
+    } catch (err) {
+        console.error('Portal catalog error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Portal Clientes - Crear Pedido desde la web
+app.post('/api/portal/orders', async (req, res) => {
+    const { shop_id, items, delivery_date, note } = req.body;
+    const companyId = req.headers['x-company-id'];
+    try {
+        if (!shop_id || !items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Datos de pedido inválidos' });
+        }
+
+        let total = 0;
+        items.forEach(it => {
+            total += (parseFloat(it.price) || 0) * (parseInt(it.quantity) || 0);
+        });
+
+        const { data: oData, error: oError } = await supabase.from('orders').insert([{
+            seller_id: null,
+            shop_id,
+            status: 'pendiente',
+            total,
+            company_id: companyId
+        }]).select();
+
+        if (oError) throw oError;
+
+        const orderId = oData[0].id;
+        const itemsWithOrderId = items.map(it => ({
+            order_id: orderId,
+            variant_id: it.variant_id,
+            quantity: parseInt(it.quantity) || 0,
+            price_unit: parseFloat(it.price) || 0,
+            total: (parseFloat(it.price) || 0) * (parseInt(it.quantity) || 0)
+        }));
+
+        const { error: itemsError } = await supabase.from('order_items').insert(itemsWithOrderId);
+        if (itemsError) throw itemsError;
+
+        res.json({
+            success: true,
+            order_id: orderId,
+            total,
+            delivery_date,
+            note
+        });
+    } catch (err) {
+        console.error('Portal order error:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Entregadores CRUD

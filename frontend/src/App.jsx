@@ -8,10 +8,14 @@ import ProductWizard from './components/ProductWizard';
 import CatalogEditor from './components/CatalogEditor';
 import OrderManager from './components/OrderManager';
 import StockManager from './components/StockManager';
+import ClientPortal from './components/ClientPortal';
 
 const APP_VERSION = 'v4.1.0';
 
 function App() {
+    // Check if user is navigating directly to the client portal
+    const isPortalUrl = window.location.pathname.startsWith('/tienda') || window.location.hash.startsWith('#/tienda');
+    const [viewMode, setViewMode] = useState(isPortalUrl ? 'portal' : 'admin');
     const [company, setCompany] = useState(() => {
         try {
             const saved = localStorage.getItem('activeCompany');
@@ -94,6 +98,11 @@ function App() {
             <span className="hidden lg:block text-sm">{label}</span>
         </button>
     );
+
+    // Render Client Portal directly if URL or view mode is portal
+    if (viewMode === 'portal') {
+        return <ClientPortal />;
+    }
 
     // Render Login / Register Portal if not authenticated
     if (!company) {
@@ -182,6 +191,17 @@ function App() {
                             {authLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                             {isLoginTab ? 'Ingresar al Sistema' : 'Crear Registro Empresa'}
                         </button>
+
+                        <div className="pt-2 text-center border-t border-slate-700/60 mt-4">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('portal')}
+                                className="text-[10px] text-primary hover:text-blue-400 font-black uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
+                            >
+                                <span className="material-symbols-outlined text-sm">storefront</span>
+                                ¿Sos cliente? Ir al Portal de Pedidos
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -216,6 +236,17 @@ function App() {
                     <NavItem id="stock" icon="inventory" label="Control de Stock" />
                     <NavItem id="orders" icon="shopping_cart_checkout" label="Pedidos" />
                     <NavItem id="config" icon="settings" label="Configuración" />
+
+                    <div className="pt-2 px-1">
+                        <button
+                            onClick={() => window.open(`${window.location.origin}/tienda`, '_blank')}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-all w-full text-left"
+                            title="Abrir vista del Portal de Clientes"
+                        >
+                            <span className="material-symbols-outlined text-lg">storefront</span>
+                            <span className="hidden lg:block text-[11px] font-black uppercase">Ver Tienda Web</span>
+                        </button>
+                    </div>
                 </nav>
 
                 <div className="p-4 border-t border-analyst-100 space-y-3">

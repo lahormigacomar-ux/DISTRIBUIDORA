@@ -72,11 +72,46 @@ const Configuration = () => {
 
     const [pickingIconFor, setPickingIconFor] = useState(null);
 
+    // Delivery Schedule States
+    const [deliverySchedule, setDeliverySchedule] = useState({
+        whatsapp_number: '',
+        rules: [
+            { id: '1', delivery_day: 2, delivery_name: 'Martes', cutoff_day: 1, cutoff_name: 'Lunes', cutoff_time: '12:00' },
+            { id: '2', delivery_day: 4, delivery_name: 'Jueves', cutoff_day: 3, cutoff_name: 'Miércoles', cutoff_time: '12:00' }
+        ]
+    });
+    const [savingSchedule, setSavingSchedule] = useState(false);
+
     useEffect(() => {
         fetchData();
         fetchPriceLabels();
         fetchCompanyProfile();
+        fetchDeliverySchedule();
     }, []);
+
+    const fetchDeliverySchedule = async () => {
+        try {
+            const { data } = await axios.get(`${API_URL}/settings/delivery_schedule`);
+            if (data && data.rules) {
+                setDeliverySchedule(data);
+            }
+        } catch (e) {
+            console.error('Error fetching delivery schedule:', e);
+        }
+    };
+
+    const saveDeliverySchedule = async () => {
+        setSavingSchedule(true);
+        try {
+            await axios.post(`${API_URL}/settings/delivery_schedule`, deliverySchedule);
+            alert('Cronograma de entregas guardado correctamente.');
+        } catch (e) {
+            console.error(e);
+            alert('Error al guardar el cronograma de entregas.');
+        } finally {
+            setSavingSchedule(false);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -220,7 +255,9 @@ const Configuration = () => {
                 latitude: entity.latitude || '',
                 longitude: entity.longitude || '',
                 price_list: entity.price_list || 'price_unit',
-                visiting_days: entity.visiting_days || []
+                visiting_days: entity.visiting_days || [],
+                portal_user: entity.portal_user || '',
+                portal_password: entity.portal_password || ''
             });
         } else {
             setEntityForm({ name: entity.name, vehicle: entity.vehicle || '', phone: entity.phone || '', is_active: entity.is_active, username: entity.username || '', password: entity.password || '' });
@@ -356,6 +393,13 @@ const Configuration = () => {
                 >
                     <span className="material-symbols-outlined text-sm font-black">groups</span>
                     Cargar Preventistas, Negocios y Choferes
+                </button>
+                <button
+                    onClick={() => setActiveSectionTab('schedule')}
+                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeSectionTab === 'schedule' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-analyst-500 hover:bg-slate-50'}`}
+                >
+                    <span className="material-symbols-outlined text-sm font-black">local_shipping</span>
+                    Entregas y Cierre de Pedidos
                 </button>
                 <button
                     onClick={() => { setActiveSectionTab('company'); fetchCompanyProfile(); }}
@@ -571,6 +615,155 @@ const Configuration = () => {
                 </div>
             )}
 
+            {activeSectionTab === 'schedule' && (
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-8 min-h-0">
+                    <div className="max-w-4xl bg-white border border-analyst-200 rounded-3xl p-6 shadow-sm space-y-6">
+                        <div className="flex items-center justify-between pb-4 border-b border-analyst-150">
+                            <div>
+                                <h3 className="font-black text-xs text-analyst-900 uppercase tracking-widest flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-xl">schedule</span>
+                                    Cronograma de Entregas y Horario de Corte
+                                </h3>
+                                <p className="text-[10px] text-analyst-500 font-bold uppercase tracking-wider mt-0.5">
+                                    Configurá qué días entregás y hasta qué día/hora el cliente puede hacer el pedido
+                                </p>
+                            </div>
+                            <button
+                                onClick={saveDeliverySchedule}
+                                disabled={savingSchedule}
+                                className="bg-primary hover:bg-blue-700 text-white px-6 h-10 text-[10px] font-black rounded-xl uppercase tracking-wider shadow-lg shadow-primary/20 flex items-center gap-2"
+                            >
+                                {savingSchedule && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                                Guardar Cronograma
+                            </button>
+                        </div>
+
+                        {/* WhatsApp Receptor */}
+                        <div className="bg-green-50/70 border border-green-200 p-4 rounded-2xl space-y-2">
+                            <div className="flex items-center gap-2 text-green-700">
+                                <span className="material-symbols-outlined text-xl">chat</span>
+                                <h4 className="text-[11px] font-black uppercase">WhatsApp Receptor de Pedidos</h4>
+                            </div>
+                            <p className="text-[9px] text-green-800 leading-normal">
+                                Número al que los clientes enviarán su pedido al finalizar el carrito (con código de país, sin espacios ni símbolos, ej: 5493884251878).
+                            </p>
+                            <input
+                                type="text"
+                                placeholder="5493884251878"
+                                value={deliverySchedule.whatsapp_number || ''}
+                                onChange={(e) => setDeliverySchedule(prev => ({ ...prev, whatsapp_number: e.target.value.replace(/\D/g, '') }))}
+                                className="w-full max-w-sm bg-white border border-green-300 rounded-xl px-3 py-2 text-xs font-mono font-bold"
+                            />
+                        </div>
+
+                        {/* Reglas de Entrega */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-wider">
+                                    Reglas Semanales de Entrega y Cierre
+                                </h4>
+                                <button
+                                    onClick={() => {
+                                        const newRule = {
+                                            id: Date.now().toString(),
+                                            delivery_day: 2,
+                                            delivery_name: 'Martes',
+                                            cutoff_day: 1,
+                                            cutoff_name: 'Lunes',
+                                            cutoff_time: '12:00'
+                                        };
+                                        setDeliverySchedule(prev => ({ ...prev, rules: [...(prev.rules || []), newRule] }));
+                                    }}
+                                    className="px-4 py-1.5 bg-slate-800 hover:bg-black text-white text-[9px] font-black rounded-xl uppercase flex items-center gap-1.5 shadow"
+                                >
+                                    + Agregar Día de Entrega
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {(deliverySchedule.rules || []).map((rule, idx) => {
+                                    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                                    return (
+                                        <div key={rule.id || idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
+                                            <div className="flex flex-wrap items-center gap-3 flex-1">
+                                                {/* Día de Entrega */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Día de Entrega</label>
+                                                    <select
+                                                        value={rule.delivery_day}
+                                                        onChange={(e) => {
+                                                            const dVal = parseInt(e.target.value);
+                                                            const updated = [...deliverySchedule.rules];
+                                                            updated[idx].delivery_day = dVal;
+                                                            updated[idx].delivery_name = dayNames[dVal];
+                                                            setDeliverySchedule({ ...deliverySchedule, rules: updated });
+                                                        }}
+                                                        className="bg-white border border-slate-300 rounded-xl text-xs font-black px-3 py-1.5 uppercase"
+                                                    >
+                                                        {dayNames.map((d, i) => (
+                                                            <option key={i} value={i}>{d.toUpperCase()}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <span className="material-symbols-outlined text-slate-400 text-lg hidden md:block mt-4">arrow_forward</span>
+
+                                                {/* Día de Cierre */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Cierra el Pedido el</label>
+                                                    <select
+                                                        value={rule.cutoff_day}
+                                                        onChange={(e) => {
+                                                            const cVal = parseInt(e.target.value);
+                                                            const updated = [...deliverySchedule.rules];
+                                                            updated[idx].cutoff_day = cVal;
+                                                            updated[idx].cutoff_name = dayNames[cVal];
+                                                            setDeliverySchedule({ ...deliverySchedule, rules: updated });
+                                                        }}
+                                                        className="bg-white border border-slate-300 rounded-xl text-xs font-black px-3 py-1.5 uppercase"
+                                                    >
+                                                        {dayNames.map((d, i) => (
+                                                            <option key={i} value={i}>{d.toUpperCase()}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Hora de Cierre */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">A las (Horario Máximo)</label>
+                                                    <input
+                                                        type="time"
+                                                        value={rule.cutoff_time || '12:00'}
+                                                        onChange={(e) => {
+                                                            const updated = [...deliverySchedule.rules];
+                                                            updated[idx].cutoff_time = e.target.value;
+                                                            setDeliverySchedule({ ...deliverySchedule, rules: updated });
+                                                        }}
+                                                        className="bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold px-3 py-1.5"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const updated = deliverySchedule.rules.filter((_, i) => i !== idx);
+                                                    setDeliverySchedule({ ...deliverySchedule, rules: updated });
+                                                }}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-xl"
+                                                title="Eliminar regla"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeSectionTab === 'entities' && (
                 <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-h-0 overflow-y-auto pb-8 custom-scrollbar">
                     {/* Left Form Panel */}
@@ -715,6 +908,37 @@ const Configuration = () => {
                                                         <option key={key} value={key}>{label.toUpperCase()}</option>
                                                     ))}
                                                 </select>
+                                            </div>
+
+                                            {/* Credenciales Portal Web Clientes */}
+                                            <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 mt-2">
+                                                <div className="flex items-center gap-1.5 text-primary">
+                                                    <span className="material-symbols-outlined text-[15px]">storefront</span>
+                                                    <span className="text-[9px] font-black uppercase">Acceso Portal Web de Clientes</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label className="text-[7.5px] font-black text-slate-500 uppercase">Usuario Web</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="ej: elazulejo"
+                                                            value={entityForm.portal_user || ''}
+                                                            onChange={(e) => setEntityForm(prev => ({ ...prev, portal_user: e.target.value.toLowerCase().replace(/\s+/g, '') }))}
+                                                            className="w-full bg-white border border-blue-200 rounded-lg text-xs px-2 py-1 font-mono font-bold"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[7.5px] font-black text-slate-500 uppercase">Contraseña</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="ej: 123456"
+                                                            value={entityForm.portal_password || ''}
+                                                            onChange={(e) => setEntityForm(prev => ({ ...prev, portal_password: e.target.value }))}
+                                                            className="w-full bg-white border border-blue-200 rounded-lg text-xs px-2 py-1 font-mono font-bold"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <p className="text-[7px] text-slate-400 leading-tight">Con estos datos el cliente iniciará sesión en el portal web para ver sus precios y hacer pedidos.</p>
                                             </div>
 
                                             <div className="space-y-1 pt-2">
@@ -918,6 +1142,30 @@ const Configuration = () => {
                                                     <p className="text-[7.5px] font-bold text-primary mt-0.5 uppercase">
                                                         Lista: {priceLabels[sh.price_list] || 'PRECIO BASE'}
                                                     </p>
+                                                    {sh.portal_user ? (
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            <span className="px-1.5 py-0.5 bg-blue-50 text-primary border border-blue-200 rounded text-[7.5px] font-mono font-bold lowercase flex items-center gap-0.5">
+                                                                <span className="material-symbols-outlined text-[9px]">key</span>
+                                                                {sh.portal_user} / {sh.portal_password || '••••'}
+                                                            </span>
+                                                            {sh.phone && (
+                                                                <button
+                                                                    title="Enviar credenciales por WhatsApp"
+                                                                    onClick={() => {
+                                                                        const cleanPhone = (sh.phone || '').replace(/\D/g, '');
+                                                                        const storeUrl = `${window.location.origin}/tienda`;
+                                                                        const msg = encodeURIComponent(`Hola ${sh.owner || sh.name}! Podés hacer tus pedidos en nuestro portal web:\n🌐 ${storeUrl}\n👤 Usuario: ${sh.portal_user}\n🔑 Clave: ${sh.portal_password}\n(Precios asignados a tu cuenta)`);
+                                                                        window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+                                                                    }}
+                                                                    className="p-0.5 text-green-600 hover:bg-green-50 rounded"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[13px]">share</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[7px] text-slate-400 font-normal italic mt-0.5 block">Sin usuario web</span>
+                                                    )}
                                                     <div className="flex flex-wrap gap-1 mt-1">
                                                         {(sh.visiting_days || []).map(day => (
                                                             <span key={day} className="px-1 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded text-[7px] font-bold">

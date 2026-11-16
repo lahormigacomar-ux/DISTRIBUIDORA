@@ -1657,7 +1657,7 @@ app.get('/api/portal/catalog', async (req, res) => {
 
 // Portal Clientes - Crear Pedido desde la web
 app.post('/api/portal/orders', async (req, res) => {
-    const { shop_id, items, delivery_date, note } = req.body;
+    const { shop_id, items, delivery_date, note, recipient_name, delivery_address, contact_phone } = req.body;
     const companyId = req.headers['x-company-id'];
     try {
         if (!shop_id || !items || !Array.isArray(items) || items.length === 0) {
@@ -1691,6 +1691,33 @@ app.post('/api/portal/orders', async (req, res) => {
         const { error: itemsError } = await supabase.from('order_items').insert(itemsWithOrderId);
         if (itemsError) throw itemsError;
 
+        // Guardar metadatos adicionales del pedido en settings si viene información de entrega
+        if (delivery_date || note || recipient_name || delivery_address || contact_phone) {
+            try {
+                const { data: metaSetting } = await supabase.from('settings')
+                    .select('value')
+                    .eq('key', 'orders_metadata')
+                    .eq('company_id', companyId)
+                    .single();
+                const metaMap = metaSetting?.value || {};
+                metaMap[orderId] = {
+                    delivery_date,
+                    note,
+                    recipient_name,
+                    delivery_address,
+                    contact_phone,
+                    created_at: new Date().toISOString()
+                };
+                await supabase.from('settings').upsert({
+                    key: 'orders_metadata',
+                    company_id: companyId,
+                    value: metaMap
+                });
+            } catch (e) {
+                console.error('Error saving order metadata:', e);
+            }
+        }
+
         res.json({
             success: true,
             order_id: orderId,
@@ -1700,6 +1727,55 @@ app.post('/api/portal/orders', async (req, res) => {
         });
     } catch (err) {
         console.error('Portal order error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Portal Clientes - Historial de pedidos del cliente
+app.get('/api/portal/my-orders', async (req, res) => {
+    const companyId = req.headers['x-company-id'];
+    const shopId = req.query.shop_id;
+
+    if (!shopId) return res.status(400).json({ error: 'Falta shop_id' });
+
+    try {
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                order_items(
+                    *,
+                    product_variants(
+                        *,
+                        products(*)
+                    )
+                )
+            `)
+            .eq('shop_id', shopId)
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Fetch orders metadata for delivery dates and notes
+        const { data: metaSetting } = await supabase.from('settings')
+            .select('value')
+            .eq('key', 'orders_metadata')
+            .eq('company_id', companyId)
+            .single();
+        const metaMap = metaSetting?.value || {};
+
+        const enriched = (orders || []).map(o => ({
+            ...o,
+            delivery_date: metaMap[o.id]?.delivery_date || null,
+            note: metaMap[o.id]?.note || '',
+            recipient_name: metaMap[o.id]?.recipient_name || '',
+            delivery_address: metaMap[o.id]?.delivery_address || ''
+        }));
+
+        res.json(enriched);
+    } catch (err) {
+        console.error('Portal my-orders error:', err);
         res.status(500).json({ error: err.message });
     }
 });

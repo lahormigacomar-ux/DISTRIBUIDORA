@@ -21,7 +21,7 @@
   }
 
   body {
-    @apply bg-analyst-100 font-display text-analyst-800 antialiased overflow-hidden h-screen;
+    @apply bg-slate-50 font-display text-analyst-800 antialiased min-h-screen overflow-x-hidden;
   }
 }
 

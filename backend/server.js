@@ -1570,12 +1570,17 @@ app.post('/api/portal/login', async (req, res) => {
     }
 });
 
-// Portal Clientes - Obtener catálogo para el cliente con SU precio
+// Portal Clientes - Obtener catálogo para el cliente con SU precio (o catálogo público si no está logueado)
 app.get('/api/portal/catalog', async (req, res) => {
-    const companyId = req.headers['x-company-id'];
+    let companyId = req.headers['x-company-id'];
     const priceList = req.query.price_list || 'price_unit';
 
     try {
+        if (!companyId) {
+            const { data: comps } = await supabase.from('companies').select('id, name, logo_url, phone').limit(1);
+            if (comps && comps[0]) companyId = comps[0].id;
+        }
+
         const { data: products, error: pErr } = await supabase
             .from('products')
             .select(`
@@ -1609,6 +1614,9 @@ app.get('/api/portal/catalog', async (req, res) => {
             rules: []
         };
 
+        // Fetch company info
+        const { data: compInfo } = await supabase.from('companies').select('id, name, logo_url, phone, code').eq('id', companyId).single();
+
         // Format products with only the assigned client price
         const formatted = (products || []).map(p => {
             const activeVars = (p.product_variants || []).filter(v => v.is_active !== false).map(v => {
@@ -1635,6 +1643,7 @@ app.get('/api/portal/catalog', async (req, res) => {
         }).filter(p => p.variants.length > 0);
 
         res.json({
+            company: compInfo,
             products: formatted,
             price_list: priceList,
             price_list_name: priceLabels[priceList] || 'Lista Estándar',

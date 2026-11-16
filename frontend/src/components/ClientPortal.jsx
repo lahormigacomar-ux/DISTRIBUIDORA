@@ -341,6 +341,11 @@ const ClientPortal = () => {
                     </div>
                     <div className="flex items-center gap-3 text-slate-400 text-[10px]">
                         <span>Portal Exclusivo de Clientes</span>
+                        <span className="text-slate-600">|</span>
+                        <a href="/admin" className="hover:text-blue-300 transition-colors flex items-center gap-1 text-[10px]">
+                            <span className="material-symbols-outlined text-xs">lock</span>
+                            <span>Administración</span>
+                        </a>
                     </div>
                 </div>
             </div>

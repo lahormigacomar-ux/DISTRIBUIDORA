@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Trigger new Vercel production build
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from './config';
 import Inventory from './components/Inventory';
@@ -13,9 +13,28 @@ import ClientPortal from './components/ClientPortal';
 const APP_VERSION = 'v4.1.0';
 
 function App() {
-    // Check if user is navigating directly to the client portal
-    const isPortalUrl = window.location.pathname.startsWith('/tienda') || window.location.hash.startsWith('#/tienda');
-    const [viewMode, setViewMode] = useState(isPortalUrl ? 'portal' : 'admin');
+    // Al entrar a tubomundo.com.ar o /tienda, por defecto carga SIEMPRE la tienda.
+    // El panel de administración se accede desde /admin o #/admin
+    const checkIsAdmin = () => {
+        const path = (window.location.pathname || '').toLowerCase();
+        const hash = (window.location.hash || '').toLowerCase();
+        return path.startsWith('/admin') || path.startsWith('/gestion') || hash.startsWith('#/admin') || hash.startsWith('#/gestion');
+    };
+
+    const [viewMode, setViewMode] = useState(() => checkIsAdmin() ? 'admin' : 'portal');
+
+    useEffect(() => {
+        const handleLocationChange = () => {
+            setViewMode(checkIsAdmin() ? 'admin' : 'portal');
+        };
+        window.addEventListener('popstate', handleLocationChange);
+        window.addEventListener('hashchange', handleLocationChange);
+        return () => {
+            window.removeEventListener('popstate', handleLocationChange);
+            window.removeEventListener('hashchange', handleLocationChange);
+        };
+    }, []);
+
     const [company, setCompany] = useState(() => {
         try {
             const saved = localStorage.getItem('activeCompany');

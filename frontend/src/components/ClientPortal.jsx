@@ -23,7 +23,7 @@ const ClientPortal = () => {
     const [catalog, setCatalog] = useState([]);
     const [priceListName, setPriceListName] = useState('');
     const [deliverySchedule, setDeliverySchedule] = useState({ whatsapp_number: '', rules: [] });
-    const [loadingCatalog, setLoadingCatalog] = useState(true);
+    const [loadingCatalog, setLoadingCatalog] = useState(false);
 
     // Filters State
     const [searchQuery, setSearchQuery] = useState('');
@@ -45,7 +45,11 @@ const ClientPortal = () => {
     }, []);
 
     useEffect(() => {
-        fetchCatalog();
+        if (clientSession) {
+            fetchCatalog();
+        } else {
+            fetchPublicInfo();
+        }
     }, [clientSession]);
 
     const handleLogin = async (e) => {
@@ -68,8 +72,16 @@ const ClientPortal = () => {
     const handleLogout = () => {
         localStorage.removeItem('clientPortalSession');
         setClientSession(null);
+        setCatalog([]);
         setCart({});
         setOrderSuccess(null);
+    };
+
+    const fetchPublicInfo = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/settings/delivery_schedule`);
+            if (res.data) setDeliverySchedule(res.data);
+        } catch (e) { }
     };
 
     const fetchCatalog = async () => {
@@ -82,7 +94,7 @@ const ClientPortal = () => {
             });
             setCatalog(res.data.products || []);
             setCompanyInfo(res.data.company || null);
-            setPriceListName(res.data.price_list_name || (clientSession ? 'Lista Asignada' : 'Precios de Referencia'));
+            setPriceListName(res.data.price_list_name || 'Lista Asignada');
             setDeliverySchedule(res.data.delivery_schedule || { whatsapp_number: '', rules: [] });
         } catch (err) {
             console.error('Error fetching portal catalog:', err);
@@ -314,12 +326,12 @@ const ClientPortal = () => {
                                 </span>
                             </div>
                             <p className="text-[10px] font-bold text-slate-500 mt-0.5">
-                                {clientSession ? `Cliente: ${clientSession.client.name.toUpperCase()} (${priceListName})` : 'Catálogo Oficial de Productos'}
+                                {clientSession ? `Cliente: ${clientSession.client.name.toUpperCase()} (${priceListName})` : 'Portal Mayorista de Pedidos'}
                             </p>
                         </div>
                     </div>
 
-                    {/* Actions: Search bar on desktop + Auth + Cart */}
+                    {/* Actions: Auth + Cart */}
                     <div className="flex items-center gap-2.5">
                         {clientSession ? (
                             <div className="flex items-center gap-2">
@@ -334,30 +346,29 @@ const ClientPortal = () => {
                                 >
                                     <span className="material-symbols-outlined text-xl">logout</span>
                                 </button>
+                                {/* Cart Button only when logged in */}
+                                <button
+                                    onClick={() => setIsCartOpen(true)}
+                                    className="relative bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-lg">shopping_cart</span>
+                                    <span className="hidden sm:inline">${cartTotal.toLocaleString('es-AR')}</span>
+                                    {totalItemsCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                                            {totalItemsCount}
+                                        </span>
+                                    )}
+                                </button>
                             </div>
                         ) : (
                             <button
                                 onClick={() => setIsLoginModalOpen(true)}
-                                className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all"
+                                className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md shadow-blue-600/20 transition-all"
                             >
-                                <span className="material-symbols-outlined text-lg">lock</span>
-                                <span className="hidden sm:inline">Ingresar Cliente</span>
+                                <span className="material-symbols-outlined text-lg">login</span>
+                                <span>Ingresar con mi Cuenta</span>
                             </button>
                         )}
-
-                        {/* Cart Button */}
-                        <button
-                            onClick={() => setIsCartOpen(true)}
-                            className="relative bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all active:scale-95"
-                        >
-                            <span className="material-symbols-outlined text-lg">shopping_cart</span>
-                            <span className="hidden sm:inline">${cartTotal.toLocaleString('es-AR')}</span>
-                            {totalItemsCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
-                                    {totalItemsCount}
-                                </span>
-                            )}
-                        </button>
                     </div>
                 </div>
             </header>
@@ -413,270 +424,249 @@ const ClientPortal = () => {
                 </div>
             )}
 
-            {/* Hero / Value Proposition Section */}
-            {!clientSession && (
-                <section className="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200/80 py-10 px-4">
-                    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-                        <div className="md:col-span-8 space-y-4">
+            {/* IF NOT LOGGED IN: SHOW MODERN LANDING & INLINE LOGIN (NO PRODUCTS SHOWN) */}
+            {!clientSession ? (
+                <div className="flex-1 flex flex-col justify-center items-center py-12 px-4">
+                    <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+                        {/* Left Side: Brand Story */}
+                        <div className="md:col-span-7 space-y-5 text-center md:text-left">
                             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-black uppercase tracking-wider border border-blue-200">
                                 <span className="material-symbols-outlined text-sm">verified</span>
-                                Distribución Oficial y Logística Integrada
+                                Acceso Privado para Clientes
                             </span>
                             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight leading-tight">
-                                Tuberías PVC, Sanitarios, Morteros y Materiales de Construcción
+                                Tuberías PVC, Sanitarios, Morteros y Construcción
                             </h2>
-                            <p className="text-sm text-slate-600 font-medium max-w-2xl leading-relaxed">
-                                Abastecemos ferreterías, corralones y obras de gran envergadura. Consultá nuestro catálogo online en tiempo real, iniciá sesión con tu cuenta mayorista y cargá tus pedidos con entrega programada.
+                            <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                                Portal exclusivo de pedidos para corralones, ferreterías y profesionales. Iniciá sesión con tu usuario y contraseña para acceder al catálogo completo con <strong>tus precios por escala asignados</strong> y programar tu entrega.
                             </p>
-                            <div className="flex flex-wrap gap-3 pt-2">
-                                <button
-                                    onClick={() => setIsLoginModalOpen(true)}
-                                    className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 flex items-center gap-2 transition-all"
-                                >
-                                    <span className="material-symbols-outlined text-lg">account_circle</span>
-                                    Acceso Clientes Mayoristas
-                                </button>
-                                <a
-                                    href="#catalogo"
-                                    className="px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-black uppercase tracking-wider shadow-xs transition-all flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-lg">inventory_2</span>
-                                    Ver Catálogo
-                                </a>
-                            </div>
-                        </div>
-                        <div className="md:col-span-4 grid grid-cols-2 gap-3">
-                            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-                                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-2xl">local_shipping</span>
-                                </div>
-                                <h3 className="text-xs font-black uppercase text-slate-900">Entregas en Obra</h3>
-                                <p className="text-[10px] text-slate-500 font-medium">Repartos semanales organizados y seguimiento logístico.</p>
-                            </div>
-                            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-                                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-2xl">sell</span>
-                                </div>
-                                <h3 className="text-xs font-black uppercase text-slate-900">Precios por Escala</h3>
-                                <p className="text-[10px] text-slate-500 font-medium">Valores exclusivos por Pallet, 1/2 Equipo y Equipo completo.</p>
-                            </div>
-                            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-                                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-2xl">chat</span>
-                                </div>
-                                <h3 className="text-xs font-black uppercase text-slate-900">WhatsApp Directo</h3>
-                                <p className="text-[10px] text-slate-500 font-medium">Confirmación instantánea de pedidos por chat oficial.</p>
-                            </div>
-                            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-                                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-2xl">verified_user</span>
-                                </div>
-                                <h3 className="text-xs font-black uppercase text-slate-900">Stock Garantizado</h3>
-                                <p className="text-[10px] text-slate-500 font-medium">Disponibilidad asegurada en marcas líderes del mercado.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
 
-            {/* Search & Categories Filter */}
-            <div id="catalogo" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-                    {/* Search box */}
-                    <div className="relative w-full sm:max-w-md">
-                        <span className="material-symbols-outlined absolute left-3.5 top-3 text-slate-400 text-xl">search</span>
-                        <input
-                            type="text"
-                            placeholder="Buscar producto, cañería, cemento, código..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-xs transition-all"
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600">
-                                <span className="material-symbols-outlined text-lg">close</span>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider self-start sm:self-center">
-                        Mostrando {filteredProducts.length} producto{filteredProducts.length === 1 ? '' : 's'}
-                    </div>
-                </div>
-
-                {/* Family / Category filter pills */}
-                <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                    <button
-                        onClick={() => setSelectedFamily('ALL')}
-                        className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${selectedFamily === 'ALL' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
-                    >
-                        Todos ({catalog.length})
-                    </button>
-                    {families.map(f => (
-                        <button
-                            key={f.id}
-                            onClick={() => setSelectedFamily(f.id)}
-                            className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${selectedFamily === f.id ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
-                        >
-                            {f.name}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Catalog Grid */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 w-full flex-1">
-                {loadingCatalog ? (
-                    <div className="p-20 text-center space-y-4">
-                        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Cargando catálogo oficial...</p>
-                    </div>
-                ) : filteredProducts.length === 0 ? (
-                    <div className="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-3 shadow-xs">
-                        <span className="material-symbols-outlined text-5xl text-slate-300">inventory_2</span>
-                        <h4 className="text-sm font-black text-slate-800 uppercase">No se encontraron productos</h4>
-                        <p className="text-xs text-slate-400 font-medium">Intentá con otra palabra de búsqueda o cambiá la categoría seleccionada.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                        {filteredProducts.map(p => (
-                            <div key={p.id} className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-xs flex flex-col justify-between hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
-                                <div>
-                                    {/* Image with Tag */}
-                                    <div className="relative w-full h-44 bg-slate-50 rounded-2xl overflow-hidden mb-3 border border-slate-100 flex items-center justify-center p-3 group-hover:scale-[1.02] transition-transform">
-                                        {p.image_url ? (
-                                            <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
-                                        ) : (
-                                            <span className="material-symbols-outlined text-5xl text-slate-200">construction</span>
-                                        )}
-                                        {p.family && (
-                                            <span className="absolute top-2.5 left-2.5 bg-slate-900/85 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider">
-                                                {p.family}
-                                            </span>
-                                        )}
+                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                                        <span className="material-symbols-outlined text-lg">sell</span>
                                     </div>
-
-                                    {/* Product Title & Info */}
-                                    <h3 className="font-black text-xs text-slate-900 uppercase leading-snug line-clamp-2">{p.name}</h3>
-                                    {p.description && (
-                                        <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-normal font-medium">{p.description}</p>
-                                    )}
+                                    <h4 className="text-xs font-black uppercase text-slate-900">Precios por Escala</h4>
+                                    <p className="text-[10px] text-slate-500 font-medium">Pallet, 1/2 Equipo y Equipo completo.</p>
                                 </div>
-
-                                {/* Variants with Assigned Price */}
-                                <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                                    {p.variants.map(v => {
-                                        const inCartQty = cart[v.id]?.quantity || 0;
-                                        return (
-                                            <div key={v.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 hover:bg-slate-50 transition-colors">
-                                                <div className="min-w-0 pr-2">
-                                                    <span className="text-[11px] font-black text-slate-800 block truncate">{v.name}</span>
-                                                    <span className="text-xs font-black text-blue-600 font-mono">
-                                                        ${v.price.toLocaleString('es-AR')}
-                                                    </span>
-                                                </div>
-
-                                                {/* Stepper Button */}
-                                                <div className="flex items-center gap-1 shrink-0 bg-white border border-slate-200 rounded-xl p-0.5 shadow-xs">
-                                                    {inCartQty > 0 ? (
-                                                        <>
-                                                            <button
-                                                                onClick={() => updateQuantity(p, v, -1)}
-                                                                className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg font-black text-sm transition-colors"
-                                                            >
-                                                                -
-                                                            </button>
-                                                            <span className="w-6 text-center text-xs font-black text-slate-900">{inCartQty}</span>
-                                                            <button
-                                                                onClick={() => updateQuantity(p, v, 1)}
-                                                                className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-black text-sm transition-colors"
-                                                            >
-                                                                +
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => updateQuantity(p, v, 1)}
-                                                            className="px-3 h-7 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase rounded-lg transition-all flex items-center gap-1 shadow-xs shadow-blue-600/20"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm font-black">add</span>
-                                                            Pedir
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                                        <span className="material-symbols-outlined text-lg">local_shipping</span>
+                                    </div>
+                                    <h4 className="text-xs font-black uppercase text-slate-900">Entregas en Obra</h4>
+                                    <p className="text-[10px] text-slate-500 font-medium">Cronograma de repartos semanales.</p>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </main>
-
-            {/* Login Modal */}
-            {isLoginModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="w-full max-w-sm bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 relative">
-                        <button
-                            onClick={() => setIsLoginModalOpen(false)}
-                            className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
-                        >
-                            <span className="material-symbols-outlined text-xl">close</span>
-                        </button>
-
-                        <div className="text-center mb-6">
-                            <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-600/20">
-                                <span className="material-symbols-outlined text-3xl font-black">lock</span>
-                            </div>
-                            <h3 className="text-base font-black text-slate-900 uppercase">Portal de Clientes</h3>
-                            <p className="text-[11px] font-medium text-slate-500 mt-1">
-                                Ingresá tus credenciales asignadas para ver tu lista de precios exclusiva y confirmar pedidos.
-                            </p>
                         </div>
 
-                        {loginError && (
-                            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-[10px] font-bold uppercase text-center">
-                                ⚠️ {loginError}
+                        {/* Right Side: Embedded Login Box */}
+                        <div className="md:col-span-5 bg-white rounded-3xl p-7 shadow-xl border border-slate-200/80">
+                            <div className="text-center mb-6">
+                                <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md shadow-blue-600/20">
+                                    <span className="material-symbols-outlined text-3xl font-black">lock</span>
+                                </div>
+                                <h3 className="text-base font-black text-slate-900 uppercase">Ingresar al Catálogo</h3>
+                                <p className="text-[11px] font-medium text-slate-500 mt-1">
+                                    Colocá tus datos para ver productos y precios
+                                </p>
                             </div>
-                        )}
 
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Usuario Web</label>
+                            {loginError && (
+                                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-[10px] font-bold uppercase text-center">
+                                    ⚠️ {loginError}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Usuario Web</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="ej: elazulejo"
+                                        value={loginForm.user}
+                                        onChange={(e) => setLoginForm(prev => ({ ...prev, user: e.target.value }))}
+                                        className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-mono font-bold"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contraseña</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        placeholder="••••••"
+                                        value={loginForm.password}
+                                        onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                                        className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-mono font-bold"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loginLoading}
+                                    className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] rounded-xl tracking-wider transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4 disabled:opacity-40"
+                                >
+                                    {loginLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                                    Ver Mis Precios y Pedir
+                                </button>
+                            </form>
+
+                            {deliverySchedule.whatsapp_number && (
+                                <div className="mt-5 pt-4 border-t border-slate-100 text-center">
+                                    <p className="text-[10px] text-slate-400 font-medium">¿Aún no tenés usuario mayorista?</p>
+                                    <a
+                                        href={`https://wa.me/${deliverySchedule.whatsapp_number}?text=${encodeURIComponent('Hola! Quisiera solicitar un usuario mayorista para hacer pedidos en la web.')}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[11px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-wide inline-flex items-center gap-1 mt-1"
+                                    >
+                                        <span className="material-symbols-outlined text-[13px]">chat</span>
+                                        Solicitar cuenta por WhatsApp
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                /* IF LOGGED IN: SHOW FULL CATALOG & CART */
+                <>
+                    {/* Search & Categories Filter */}
+                    <div id="catalogo" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                            {/* Search box */}
+                            <div className="relative w-full sm:max-w-md">
+                                <span className="material-symbols-outlined absolute left-3.5 top-3 text-slate-400 text-xl">search</span>
                                 <input
                                     type="text"
-                                    required
-                                    placeholder="ej: elazulejo"
-                                    value={loginForm.user}
-                                    onChange={(e) => setLoginForm(prev => ({ ...prev, user: e.target.value }))}
-                                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-mono font-bold"
+                                    placeholder="Buscar producto, cañería, cemento, código..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-xs transition-all"
                                 />
+                                {searchQuery && (
+                                    <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600">
+                                        <span className="material-symbols-outlined text-lg">close</span>
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contraseña</label>
-                                <input
-                                    type="password"
-                                    required
-                                    placeholder="••••••"
-                                    value={loginForm.password}
-                                    onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-                                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-mono font-bold"
-                                />
+                            <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider self-start sm:self-center">
+                                Mostrando {filteredProducts.length} producto{filteredProducts.length === 1 ? '' : 's'}
                             </div>
+                        </div>
 
+                        {/* Family / Category filter pills */}
+                        <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
                             <button
-                                type="submit"
-                                disabled={loginLoading}
-                                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] rounded-xl tracking-wider transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4 disabled:opacity-40"
+                                onClick={() => setSelectedFamily('ALL')}
+                                className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${selectedFamily === 'ALL' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
                             >
-                                {loginLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                                Ingresar a mi Cuenta
+                                Todos ({catalog.length})
                             </button>
-                        </form>
+                            {families.map(f => (
+                                <button
+                                    key={f.id}
+                                    onClick={() => setSelectedFamily(f.id)}
+                                    className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${selectedFamily === f.id ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                                >
+                                    {f.name}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
+
+                    {/* Catalog Grid */}
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 w-full flex-1">
+                        {loadingCatalog ? (
+                            <div className="p-20 text-center space-y-4">
+                                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Cargando catálogo oficial...</p>
+                            </div>
+                        ) : filteredProducts.length === 0 ? (
+                            <div className="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-3 shadow-xs">
+                                <span className="material-symbols-outlined text-5xl text-slate-300">inventory_2</span>
+                                <h4 className="text-sm font-black text-slate-800 uppercase">No se encontraron productos</h4>
+                                <p className="text-xs text-slate-400 font-medium">Intentá con otra palabra de búsqueda o cambiá la categoría seleccionada.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                                {filteredProducts.map(p => (
+                                    <div key={p.id} className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-xs flex flex-col justify-between hover:shadow-xl hover:border-blue-200 transition-all duration-300 group">
+                                        <div>
+                                            {/* Image with Tag */}
+                                            <div className="relative w-full h-44 bg-slate-50 rounded-2xl overflow-hidden mb-3 border border-slate-100 flex items-center justify-center p-3 group-hover:scale-[1.02] transition-transform">
+                                                {p.image_url ? (
+                                                    <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-5xl text-slate-200">construction</span>
+                                                )}
+                                                {p.family && (
+                                                    <span className="absolute top-2.5 left-2.5 bg-slate-900/85 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider">
+                                                        {p.family}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Product Title & Info */}
+                                            <h3 className="font-black text-xs text-slate-900 uppercase leading-snug line-clamp-2">{p.name}</h3>
+                                            {p.description && (
+                                                <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-normal font-medium">{p.description}</p>
+                                            )}
+                                        </div>
+
+                                        {/* Variants with Assigned Price */}
+                                        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                                            {p.variants.map(v => {
+                                                const inCartQty = cart[v.id]?.quantity || 0;
+                                                return (
+                                                    <div key={v.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 hover:bg-slate-50 transition-colors">
+                                                        <div className="min-w-0 pr-2">
+                                                            <span className="text-[11px] font-black text-slate-800 block truncate">{v.name}</span>
+                                                            <span className="text-xs font-black text-blue-600 font-mono">
+                                                                ${v.price.toLocaleString('es-AR')}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Stepper Button */}
+                                                        <div className="flex items-center gap-1 shrink-0 bg-white border border-slate-200 rounded-xl p-0.5 shadow-xs">
+                                                            {inCartQty > 0 ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => updateQuantity(p, v, -1)}
+                                                                        className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg font-black text-sm transition-colors"
+                                                                    >
+                                                                        -
+                                                                    </button>
+                                                                    <span className="w-6 text-center text-xs font-black text-slate-900">{inCartQty}</span>
+                                                                    <button
+                                                                        onClick={() => updateQuantity(p, v, 1)}
+                                                                        className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-black text-sm transition-colors"
+                                                                    >
+                                                                        +
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => updateQuantity(p, v, 1)}
+                                                                    className="px-3 h-7 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase rounded-lg transition-all flex items-center gap-1 shadow-xs shadow-blue-600/20"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-sm font-black">add</span>
+                                                                    Pedir
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </main>
+                </>
             )}
 
             {/* Success Modal */}
@@ -806,7 +796,7 @@ const ClientPortal = () => {
                                     ) : (
                                         <>
                                             <span className="material-symbols-outlined text-lg">check_circle</span>
-                                            {clientSession ? 'Confirmar Pedido y Enviar' : 'Ingresar para Confirmar Pedido'}
+                                            Confirmar Pedido y Enviar
                                         </>
                                     )}
                                 </button>
